@@ -1,0 +1,64 @@
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[project]
+name = "prep"
+version = "0.1.0"
+description = "The missing data preprocessing library for LLM/VLM SFT/RL."
+readme = "README.md"
+authors = [
+    { name = "Moenupa", email = "49304833+Moenupa@users.noreply.github.com" }
+]
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "datasets[vision]",
+    "typer",
+    "openai",
+]
+
+[project.scripts]
+prep = "prep.cli:prep"
+status = "prep.cli:status"
+
+[project.optional-dependencies]
+jupyter = [
+    "ipykernel",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "C408",  # collection
+    "E501",  # line too long
+    "D100",  # no doc public module
+    "D101",  # no doc public class
+    "D102",  # no doc public method
+    "D103",  # no doc public function
+    "D104",  # no doc public package
+    "D105",  # no doc magic method
+    "D107",  # no doc __init__
+    "BLE001",# except Exception
+]
+select = [
+    "C",      # complexity
+    "E",      # error
+    "F",      # pyflakes
+    "I",      # isort
+    "W",      # warning
+    "UP",     # pyupgrade
+    "D",      # pydocstyle
+    "PT009",  # pytest assert
+    "RUF022", # sort __all__
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-vv --import-mode=importlib"
+filterwarnings = []
+markers = []
