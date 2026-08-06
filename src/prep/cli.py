@@ -13,7 +13,7 @@ def prep_dataset(
     fmt: DataFormat,
     data_id: str,
     split: Split,
-    from_local: Path | None = typer.Option(
+    src: Path | None = typer.Option(
         None, help="Source has a local path or can not be directly loaded from HF"
     ),
     show: int = typer.Option(default=3, help="Showcase first n samples after loading."),
@@ -34,7 +34,7 @@ def prep_dataset(
         False, envvar="DRY", help="If True, do not save or upload, just show the info."
     ),
 ):
-    d = load(data_id, fmt, split, from_local.as_posix() if from_local else None)
+    d = load(data_id, fmt, split, src.as_posix() if src else None)
     peek(d, show)
 
     # upload to hf

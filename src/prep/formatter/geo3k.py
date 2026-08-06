@@ -4,8 +4,8 @@ from ..constants import NUM_PROC
 from ..registry import register_loader
 
 
-@register_loader("geo3k", "verl", "train", hf_path="hiyouga/geometry3k")
-@register_loader("geo3k", "verl", "test", hf_path="hiyouga/geometry3k")
+@register_loader("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
+@register_loader("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
 def load(path: str, split: str) -> Dataset:
     d = load_dataset(path, split=split)
     d = d.map(
@@ -34,8 +34,8 @@ def load(path: str, split: str) -> Dataset:
     return d
 
 
-@register_loader("geo3k", "sft", "train", hf_path="hiyouga/geometry3k")
-@register_loader("geo3k", "sft", "test", hf_path="hiyouga/geometry3k")
+@register_loader("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
+@register_loader("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
 def load_sft(path: str, split: str) -> Dataset:
     d = load_dataset(path, split=split)
     d = d.map(

@@ -20,7 +20,7 @@ type LoadFn = Callable[[str, Split_], Dataset]
 
 class DatasetRegistryItem(NamedTuple):
     load_fn: LoadFn
-    remote_path: str | None
+    default_src: str | None
 
 
 _DATASET_REGISTRY: dict[tuple[str, DataFormat_, Split_], DatasetRegistryItem] = {}
@@ -30,7 +30,7 @@ def register_loader(
     data_id: str,
     data_format: DataFormat_,
     split: Split_,
-    hf_path: str | None = None,
+    default_src: str | None = None,
 ) -> Callable[[LoadFn], LoadFn]:
     def decorator(function: LoadFn) -> LoadFn:
         if (data_id, data_format, split) in _DATASET_REGISTRY:
@@ -41,7 +41,7 @@ def register_loader(
 
         _DATASET_REGISTRY[(data_id, data_format, split)] = DatasetRegistryItem(
             function,
-            hf_path,
+            default_src,
         )
         return function
 
@@ -52,7 +52,7 @@ def load(
     data_id: str,
     fmt: DataFormat_,
     split: Split_,
-    local_path: str | None,
+    override_src: str | None,
     image_tag: str = "<image>",
 ) -> Dataset:
     if (data_id, fmt, split) not in _DATASET_REGISTRY:
@@ -61,11 +61,11 @@ def load(
         )
 
     loader = _DATASET_REGISTRY[(data_id, fmt, split)]
-    path = local_path or loader.remote_path
+    path = override_src or loader.default_src
     if path is None:
         raise ValueError(
             f"Dataset {data_id!r} has no local/remote source to load from."
-            " Pass --from-local or register a remote path in the loading function."
+            " Pass --src to override or register a default source in loading function."
         )
     d = loader.load_fn(path, split)
     sample = d[0]
@@ -102,7 +102,7 @@ def load(
 class DataInfo(NamedTuple):
     id: str
     fmt: DataFormat_
-    remote_path: str | None
+    default_src: str | None
     save_dir: Path
 
     def save_to(self, parquet: bool, split: Split_) -> Path:
@@ -137,9 +137,9 @@ class DataInfo(NamedTuple):
 
 def get_data_info(save_dir: Path) -> list[DataInfo]:
     return [
-        DataInfo(name, fmt, remote_path, save_dir=save_dir)
-        for name, fmt, remote_path in {
-            (name, fmt, item.remote_path)
+        DataInfo(name, fmt, src, save_dir=save_dir)
+        for name, fmt, src in {
+            (name, fmt, item.default_src)
             for (name, fmt, _), item in _DATASET_REGISTRY.items()
         }
     ]
@@ -151,7 +151,7 @@ def status_table(save_dir: Path) -> Table:
     table = Table(show_header=True, header_style="bold magenta")
     table.add_column("Dataset ID", style="cyan", no_wrap=True)
     table.add_column("Data Format", style="green", no_wrap=True)
-    table.add_column("Remote Path", style="blue")
+    table.add_column("Default Source", style="blue")
     table.add_column("Local Path", style="yellow")
     for split in split_names:
         table.add_column(f"{split:5s}", style="yellow", no_wrap=True)
@@ -160,7 +160,7 @@ def status_table(save_dir: Path) -> Table:
         table.add_row(
             row.id,
             row.fmt,
-            row.remote_path or "",
+            row.default_src or "",
             str(row.local_path or ""),
             *(
                 {True: "✔", False: "✖", None: ""}[row.local_splits.get(split, None)]
