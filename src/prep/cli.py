@@ -30,8 +30,8 @@ def prep_dataset(
         True,
         help="Whether to upload as private. Works only if hf_subset is not None.",
     ),
-    dry_run: bool = typer.Option(
-        False, help="If True, do not save or upload, just show the info."
+    dry: bool = typer.Option(
+        False, envvar="DRY", help="If True, do not save or upload, just show the info."
     ),
 ):
     d = load(data_id, fmt, split, from_local.as_posix() if from_local else None)
@@ -40,17 +40,15 @@ def prep_dataset(
     # upload to hf
     if hf_subset is not None:
         logger.info(
-            f"☁️ Uploading {data_id!r} (subset={hf_subset!r}, split={split!r}, private={hf_private})"
+            f"☁️\tUploading to {data_id!r} (subset={hf_subset!r}, split={split!r}, private={hf_private})"
         )
-        if dry_run:
+        if dry:
             return
         d.push_to_hub(data_id, hf_subset, split=split, private=hf_private)
         return
 
     # save to disk
-    save_to(
-        d, data_id, fmt, split, dry_run=dry_run, save_dir=save_dir, parquet=save_parq
-    )
+    save_to(d, data_id, fmt, split, dry_run=dry, save_dir=save_dir, parquet=save_parq)
 
 
 def prep():

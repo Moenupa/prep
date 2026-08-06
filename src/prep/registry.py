@@ -12,15 +12,14 @@ logger = get_logger(__name__)
 
 DataFormat = Literal["sft", "verl", "eval"]
 Split = Literal["train", "val", "test"]
-LoadFn = Callable[[str, Split], Dataset]
 
 type DataFormat_ = DataFormat
 type Split_ = Split
-type LoadFn_ = LoadFn
+type LoadFn = Callable[[str, Split_], Dataset]
 
 
 class DatasetRegistryItem(NamedTuple):
-    load_fn: LoadFn_
+    load_fn: LoadFn
     remote_path: str | None
 
 
@@ -32,11 +31,13 @@ def register_loader(
     data_format: DataFormat_,
     split: Split_,
     hf_path: str | None = None,
-) -> Callable[[LoadFn_], LoadFn_]:
-    def decorator(function: LoadFn_) -> LoadFn_:
+) -> Callable[[LoadFn], LoadFn]:
+    def decorator(function: LoadFn) -> LoadFn:
         if (data_id, data_format, split) in _DATASET_REGISTRY:
-            msg = f"Preprocessing function already registered for data_id={data_id!r}, data_format={data_format!r}, and split={split!r}"
-            raise ValueError(msg)
+            raise ValueError(
+                "Preprocessor already registered for dataset"
+                f" id={data_id!r}, format={data_format!r}, split={split!r}"
+            )
 
         _DATASET_REGISTRY[(data_id, data_format, split)] = DatasetRegistryItem(
             function,
@@ -48,17 +49,23 @@ def register_loader(
 
 
 def load(
-    data_id: str, fmt: DataFormat_, split: Split_, local_path: str | None
+    data_id: str,
+    fmt: DataFormat_,
+    split: Split_,
+    local_path: str | None,
+    image_tag: str = "<image>",
 ) -> Dataset:
     if (data_id, fmt, split) not in _DATASET_REGISTRY:
-        msg = f"❓ Undefined pipeline for id={data_id!r}, format={fmt!r}, split={split!r}."
-        raise KeyError(msg)
+        raise KeyError(
+            f"Undefined pipeline for id={data_id!r}, format={fmt!r}, split={split!r}."
+        )
 
     loader = _DATASET_REGISTRY[(data_id, fmt, split)]
     path = local_path or loader.remote_path
     if path is None:
         raise ValueError(
-            f"🚨 Dataset {data_id!r} has no local path or remote path to load from."
+            f"Dataset {data_id!r} has no local/remote source to load from."
+            " Pass --from-local or register a remote path in the loading function."
         )
     d = loader.load_fn(path, split)
     sample = d[0]
@@ -67,20 +74,26 @@ def load(
             case "verl":
                 d = d.cast(verl_mm_features)
                 validate_openai_messages(
-                    sample["prompt"], expected_n_img=len(sample.get("images", []))
+                    sample["prompt"],
+                    expected_n_img=len(sample.get("images", [])),
+                    img_tag=image_tag,
                 )
             case "sft":
                 d = d.cast(sft_mm_features)
                 validate_openai_messages(
-                    sample["messages"], expected_n_img=len(sample.get("images", []))
+                    sample["messages"],
+                    expected_n_img=len(sample.get("images", [])),
+                    img_tag=image_tag,
                 )
             case "eval":
-                assert sample["question"].count("<image>") == len(
-                    sample.get("images", [])
+                n_tags = sample["question"].count(image_tag)
+                n_img = len(sample.get("images", []))
+                assert n_tags == n_img, (
+                    f"Mismatch: number of images {n_img} != {n_tags} {image_tag} tags."
                 )
     except Exception as e:
         logger.error(
-            f"⚠️ Validation failed {data_id!r}, format={fmt!r}, split={split!r}\n⚠️ {e}"
+            f"⚠️\tValidation failed {data_id!r}, format={fmt!r}, split={split!r}\n⚠️ {e}"
         )
 
     return d
@@ -109,9 +122,6 @@ class DataInfo(NamedTuple):
 
     @property
     def local_splits(self) -> dict[Split_, bool | None]:
-        if self.local_path is None:
-            return {}
-
         splits = {}
         for split in ["train", "val", "test"]:
             # not even registered, then None
@@ -119,7 +129,9 @@ class DataInfo(NamedTuple):
                 splits[split] = None
                 continue
 
-            splits[split] = any(self.local_path.glob(f"{split}*"))
+            splits[split] = self.local_path is not None and any(
+                self.local_path.glob(f"{split}*")
+            )
         return splits
 
 
@@ -144,7 +156,7 @@ def status_table(save_dir: Path) -> Table:
     for split in split_names:
         table.add_column(f"{split:5s}", style="yellow", no_wrap=True)
 
-    for row in sorted(get_data_info(save_dir), key=lambda x: (x.fmt, x.id)):
+    for row in sorted(get_data_info(save_dir), key=lambda x: (x.id, x.fmt)):
         table.add_row(
             row.id,
             row.fmt,
@@ -171,7 +183,7 @@ def save_to(
     save_path = DataInfo(data_id, fmt, None, save_dir=save_dir).save_to(
         parquet=parquet, split=split
     )
-    logger.info(f"{'🌵' if dry_run else '💾'} Saving {data_id!r} -> {save_path!r}")
+    logger.info(f"{'🌵' if dry_run else '💾'}\tSaving {data_id!r} -> {save_path!r}")
     if dry_run:
         return
     d.to_parquet(save_path) if parquet else d.save_to_disk(save_path)

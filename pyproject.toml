@@ -19,7 +19,7 @@ dependencies = [
 
 [project.scripts]
 prep = "prep.cli:prep"
-status = "prep.cli:status"
+ppls = "prep.cli:status"
 
 [project.optional-dependencies]
 jupyter = [

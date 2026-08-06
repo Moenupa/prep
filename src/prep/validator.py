@@ -39,6 +39,14 @@ sft_mm_features = Features(
     extra_info=Value("string"),
 )
 
+eval_vmcq_features = Features(
+    id=Value("string"),
+    images=List(Image(decode=True)),
+    question=Value("string"),
+    options=List(Value("string")),
+    answer=Value("string"),
+)
+
 
 def validate_openai_messages(
     messages: list[dict] | list[ChatCompletionMessageParam],
