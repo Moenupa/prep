@@ -1,12 +1,12 @@
 from datasets import Dataset, load_dataset
 
-from ..constants import NUM_PROC
+from ..args import LoadArgs
 from ..registry import register_loader
 
 
 @register_loader("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
 @register_loader("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
-def load(path: str, split: str) -> Dataset:
+def load(path: str, split: str, loadargs: LoadArgs) -> Dataset:
     d = load_dataset(path, split=split)
     d = d.map(
         lambda e, idx: {
@@ -28,7 +28,7 @@ def load(path: str, split: str) -> Dataset:
             },
         },
         remove_columns=d.column_names,  # remove original columns
-        num_proc=NUM_PROC,  # accelerate with multiprocessing
+        num_proc=loadargs.num_proc,  # accelerate with multiprocessing
         with_indices=True,  # add index information to the mapping function
     )
     return d
@@ -36,7 +36,7 @@ def load(path: str, split: str) -> Dataset:
 
 @register_loader("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
 @register_loader("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
-def load_sft(path: str, split: str) -> Dataset:
+def load_sft(path: str, split: str, loadargs: LoadArgs) -> Dataset:
     d = load_dataset(path, split=split)
     d = d.map(
         lambda e, idx: {
@@ -52,7 +52,7 @@ def load_sft(path: str, split: str) -> Dataset:
             "extra_info": e.get("misc", ""),
         },
         remove_columns=d.column_names,
-        num_proc=NUM_PROC,
+        num_proc=loadargs.num_proc,
         with_indices=True,
     )
     return d

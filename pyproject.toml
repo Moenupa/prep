@@ -21,6 +21,11 @@ dependencies = [
 prep = "prep.cli:prep"
 ppls = "prep.cli:status"
 
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
 [project.optional-dependencies]
 jupyter = [
     "ipykernel",

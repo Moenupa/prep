@@ -1,13 +1,43 @@
 from datasets import Dataset, load_dataset
 
+from ..args import LoadArgs
 from ..constants import (
-    ANSWER_COLS,
-    NUM_PROC,
-    QUESTION_COLS,
-    QUESTION_TEMPLATE,
     first_value,
 )
 from ..registry import register_loader
+
+
+def _parse_images(e: dict) -> list:
+    if "image" in e:
+        images = [e["image"]]
+    elif "image_1" in e:
+        images = [e[f"image_{i}"] for i in range(1, 100) if f"image_{i}" in e]
+    elif "images" in e:
+        images = e["images"]
+    else:
+        images = []
+    return images
+
+
+def _parse_qa(
+    e: dict, q_cols: list[str], a_cols: list[str], q_template: str
+) -> tuple[str, str]:
+    # in order of: sft, verl, and other open vqa formats
+    if "messages" in e:
+        assert len(e["messages"]) == 2, f"Expected 2 messages, got {len(e['messages'])}"
+        question = e["messages"][0]["content"]
+        answer = e["messages"][1]["content"]
+    elif "prompt" in e and "reward_model" in e:
+        question = e["prompt"][0]["content"]
+        answer = e["reward_model"]["ground_truth"]
+    else:
+        question = first_value(e, q_cols)
+        answer = first_value(e, a_cols)
+
+    if question is None or answer is None:
+        raise ValueError(f"Missing question or answer in example: {e}")
+
+    return q_template.format(question=question), answer
 
 
 def auto_sft(
@@ -15,36 +45,19 @@ def auto_sft(
     idx: int,
     *,
     data_name: str,
-    question_cols: list[str],
-    answer_cols: list[str],
-    question_template: str,
+    q_cols: list[str],
+    a_cols: list[str],
+    q_template: str,
 ) -> dict:
-    # a generic mapping function for single-turn VQA questions
-    # 1. 'question', 'answer', 'image' field
-    if "image" in e:
-        images = [e["image"]]
-    elif "images" in e:
-        images = e["images"]
-    else:
-        images = []
-
-    question = first_value(e, question_cols)
-    answer = first_value(e, answer_cols)
-
-    if "messages" in e:
-        assert len(e["messages"]) == 2, f"Expected 2 messages, got {len(e['messages'])}"
-        question = e["messages"][0]["content"]
-        answer = e["messages"][1]["content"]
-
-    if question is None or answer is None:
-        raise ValueError(f"Missing question or answer in example {idx}: {e}")
+    images = _parse_images(e)
+    question, answer = _parse_qa(e, q_cols, a_cols, q_template)
 
     if "<image>" not in question:
         question = "<image>" * len(images) + question
     return {
         "images": images,
         "messages": [
-            {"role": "user", "content": question_template.format(question=question)},
+            {"role": "user", "content": q_template.format(question=question)},
             {"role": "assistant", "content": answer},
         ],
         "id": f"{data_name}/{idx:08d}",
@@ -58,17 +71,12 @@ def auto_verl(
     *,
     data_name: str,
     split: str,
-    question_cols: list[str],
-    answer_cols: list[str],
-    question_template: str,
+    q_cols: list[str],
+    a_cols: list[str],
+    q_template: str,
 ):
     sft = auto_sft(
-        e,
-        idx,
-        data_name=data_name,
-        question_cols=question_cols,
-        answer_cols=answer_cols,
-        question_template=question_template,
+        e, idx, data_name=data_name, q_cols=q_cols, a_cols=a_cols, q_template=q_template
     )
     verl = {
         "images": sft["images"],
@@ -92,18 +100,18 @@ def auto_verl(
 @register_loader("vqa", "sft", "train", default_src=None)
 @register_loader("vqa", "sft", "val", default_src=None)
 @register_loader("vqa", "sft", "test", default_src=None)
-def load_sft(path: str, split: str) -> Dataset:
+def load_sft(path: str, split: str, loadargs: LoadArgs) -> Dataset:
     d = load_dataset(path, split={"val": "validation"}.get(split, split))
     d = d.map(
         auto_sft,
         fn_kwargs={
             "data_name": path.split("/")[-1],
-            "question_cols": QUESTION_COLS,
-            "answer_cols": ANSWER_COLS,
-            "question_template": QUESTION_TEMPLATE,
+            "q_cols": loadargs.question_cols,
+            "a_cols": loadargs.answer_cols,
+            "q_template": loadargs.question_template,
         },
         remove_columns=d.column_names,
-        num_proc=NUM_PROC,
+        num_proc=loadargs.num_proc,
         with_indices=True,
     )
     return d
@@ -112,19 +120,19 @@ def load_sft(path: str, split: str) -> Dataset:
 @register_loader("vqa", "verl", "train", default_src=None)
 @register_loader("vqa", "verl", "val", default_src=None)
 @register_loader("vqa", "verl", "test", default_src=None)
-def load_verl(path: str, split: str) -> Dataset:
+def load_verl(path: str, split: str, loadargs: LoadArgs) -> Dataset:
     d = load_dataset(path, split={"val": "validation"}.get(split, split))
     d = d.map(
         auto_verl,
         fn_kwargs={
             "data_name": path.split("/")[-1],
             "split": split,
-            "question_cols": QUESTION_COLS,
-            "answer_cols": ANSWER_COLS,
-            "question_template": QUESTION_TEMPLATE,
+            "q_cols": loadargs.question_cols,
+            "a_cols": loadargs.answer_cols,
+            "q_template": loadargs.question_template,
         },
         remove_columns=d.column_names,
-        num_proc=NUM_PROC,
+        num_proc=loadargs.num_proc,
         with_indices=True,
     )
     return d

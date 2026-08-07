@@ -2,53 +2,85 @@ from pathlib import Path
 
 import typer
 
-from . import formatter  # noqa: F401
+from . import constants, formatter  # noqa: F401 # trigger formatter registration
+from .args import LoadArgs, RuntimeArgs, _DataFormat, _Split
 from .constants import get_logger
-from .registry import DataFormat, Split, load, peek, save_to, status_table
+from .registry import FormatterArgs, status_table
 
 logger = get_logger(__name__)
 
 
 def prep_dataset(
-    fmt: DataFormat,
-    data_id: str,
-    split: Split,
-    src: Path | None = typer.Option(
-        None, help="Source has a local path or can not be directly loaded from HF"
+    target_format: _DataFormat = typer.Argument(
+        ..., help="Target format to convert to."
     ),
-    show: int = typer.Option(default=3, help="Showcase first n samples after loading."),
+    data_id: str = typer.Argument(..., help="Dataset ID."),
+    split: _Split = typer.Argument(..., help="Dataset split to convert."),
+    src: str | None = typer.Option(
+        None, envvar="SRC", help="Override source to load from (HF/local)."
+    ),
+    show: int = typer.Option(
+        3, envvar="SHOW", help="Preview first n samples after formatting."
+    ),
     save_dir: Path = typer.Option(
-        default=Path("~/.cache/prep").expanduser(), envvar="PREP_DIR"
+        Path("~/.cache/prep").expanduser(), envvar="SAVE_DIR"
     ),
     save_parq: bool = typer.Option(
-        True, help="Whether to save as parquet. If False, save arrow."
+        True, envvar="SAVE_PARQ", help="Save as parquets/arrow."
+    ),
+    hf: bool = typer.Option(
+        False, envvar="HF", help="Upload HF. If False, save locally."
+    ),
+    hf_repo: str | None = typer.Option(
+        None, envvar="HF_REPO", help="HF Repo. If None, use data_id."
     ),
     hf_subset: str | None = typer.Option(
-        None, help="HF Subset (e.g., 'default'). If None, do not upload."
+        None, envvar="HF_SUBSET", help="HF Subset. If None, 'default'."
     ),
     hf_private: bool = typer.Option(
-        True,
-        help="Whether to upload as private. Works only if hf_subset is not None.",
+        True, envvar="HF_PRIVATE", help="HF repo as private."
     ),
-    dry: bool = typer.Option(
-        False, envvar="DRY", help="If True, do not save or upload, just show the info."
+    dry: bool = typer.Option(False, envvar="DRY", help="If True, no save/upload."),
+    nproc: int = typer.Option(default=16, envvar="NPROC", help="Number of workers."),
+    auto_q_cols: list[str] = typer.Option(
+        default=["question", "Question", "problem"], envvar="Q_COLS"
+    ),
+    auto_q_template: str = typer.Option(default="{question}", envvar="Q_TEMPLATE"),
+    auto_a_cols: list[str] = typer.Option(
+        default=["answer", "Answer", "solution", "label"], envvar="A_COLS"
     ),
 ):
-    d = load(data_id, fmt, split, src.as_posix() if src else None)
-    peek(d, show)
+    pipeline = FormatterArgs(
+        data_id=data_id,
+        target_format=target_format,
+        split=split,
+    ).pipeline
+    runtime = RuntimeArgs(
+        override_src=src,
+        show_first_n=show,
+        save_dir=save_dir,
+        save_parquet=save_parq,
+        hf=hf,
+        hf_repo=hf_repo or data_id,
+        hf_subset=hf_subset,
+        hf_private=hf_private,
+        dry_run=dry,
+    )
+    loadargs = LoadArgs(
+        num_proc=nproc,
+        question_cols=auto_q_cols,
+        question_template=auto_q_template,
+        answer_cols=auto_a_cols,
+    )
+    d = pipeline.load(runtime.override_src, loadargs)
+    runtime.peek(d)
 
     # upload to hf
-    if hf_subset is not None:
-        logger.info(
-            f"☁️\tUploading to {data_id!r} (subset={hf_subset!r}, split={split!r}, private={hf_private})"
-        )
-        if dry:
-            return
-        d.push_to_hub(data_id, hf_subset, split=split, private=hf_private)
-        return
+    if runtime.hf:
+        runtime.upload(d, split=pipeline.split)
 
     # save to disk
-    save_to(d, data_id, fmt, split, dry_run=dry, save_dir=save_dir, parquet=save_parq)
+    runtime.save(d, pipeline.save_path(runtime.save_dir, runtime.save_parquet))
 
 
 def prep():
@@ -58,7 +90,7 @@ def prep():
 def status():
     def data_status(
         save_dir: Path = typer.Option(
-            default=Path("~/.cache/prep").expanduser(), envvar="PREP_DIR"
+            default=Path("~/.cache/prep").expanduser(), envvar="SAVE_DIR"
         ),
     ):
         from rich.console import Console

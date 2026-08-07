@@ -12,11 +12,6 @@ logging.basicConfig(
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
-NUM_PROC = int(os.getenv("NUM_PROC", "16"))
-QUESTION_COLS = os.getenv("Q_COLS", "question,Question,problem,Problem").split(",")
-QUESTION_TEMPLATE = os.getenv("Q_TEMPLATE", "{question}").strip()
-ANSWER_COLS = os.getenv("A_COLS", "answer,Answer,solution,label").split(",")
-
 
 def get_logger(name: str | None = None) -> logging.Logger:
     if name is None:
