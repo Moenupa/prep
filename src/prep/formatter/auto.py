@@ -1,10 +1,12 @@
-from datasets import Dataset, load_dataset
+from typing import TYPE_CHECKING
 
 from ..args import LoadArgs
-from ..constants import (
-    first_value,
-)
+from ..constants import first_value
+from ..load import adaptive_load_dataset
 from ..registry import register_loader
+
+if TYPE_CHECKING:
+    from datasets import Dataset
 
 
 def _parse_images(e: dict) -> list:
@@ -20,7 +22,7 @@ def _parse_images(e: dict) -> list:
 
 
 def _parse_qa(
-    e: dict, q_cols: list[str], a_cols: list[str], q_template: str
+    e: dict, q_cols: list[str], a_cols: list[str], q_template: str, n_img_tags: int
 ) -> tuple[str, str]:
     # in order of: sft, verl, and other open vqa formats
     if "messages" in e:
@@ -36,6 +38,8 @@ def _parse_qa(
 
     if question is None or answer is None:
         raise ValueError(f"Missing question or answer in example: {e}")
+    if "<image>" not in question:
+        question = "<image>" * n_img_tags + question
 
     return q_template.format(question=question), answer
 
@@ -50,14 +54,12 @@ def auto_sft(
     q_template: str,
 ) -> dict:
     images = _parse_images(e)
-    question, answer = _parse_qa(e, q_cols, a_cols, q_template)
+    question, answer = _parse_qa(e, q_cols, a_cols, q_template, n_img_tags=len(images))
 
-    if "<image>" not in question:
-        question = "<image>" * len(images) + question
     return {
         "images": images,
         "messages": [
-            {"role": "user", "content": q_template.format(question=question)},
+            {"role": "user", "content": question},
             {"role": "assistant", "content": answer},
         ],
         "id": f"{data_name}/{idx:08d}",
@@ -75,18 +77,15 @@ def auto_verl(
     a_cols: list[str],
     q_template: str,
 ):
-    sft = auto_sft(
-        e, idx, data_name=data_name, q_cols=q_cols, a_cols=a_cols, q_template=q_template
-    )
-    verl = {
-        "images": sft["images"],
+    images = _parse_images(e)
+    question, answer = _parse_qa(e, q_cols, a_cols, q_template, n_img_tags=len(images))
+
+    return {
+        "images": images,
         "data_source": data_name,
-        "prompt": sft["messages"][:1],  # only the user message
+        "prompt": [{"role": "user", "content": question}],
         "ability": "MATH",
-        "reward_model": {
-            "style": "math",
-            "ground_truth": sft["messages"][1]["content"],
-        },
+        "reward_model": {"style": "math", "ground_truth": answer},
         "extra_info": {
             "split": split,
             "index": f"{idx:08d}",
@@ -94,14 +93,13 @@ def auto_verl(
             "misc": e.get("misc", ""),
         },
     }
-    return verl
 
 
 @register_loader("vqa", "sft", "train", default_src=None)
 @register_loader("vqa", "sft", "val", default_src=None)
 @register_loader("vqa", "sft", "test", default_src=None)
-def load_sft(path: str, split: str, loadargs: LoadArgs) -> Dataset:
-    d = load_dataset(path, split={"val": "validation"}.get(split, split))
+def load_sft(path: str, split: str, loadargs: LoadArgs) -> "Dataset":
+    d = adaptive_load_dataset(path, split={"val": "validation"}.get(split, split))
     d = d.map(
         auto_sft,
         fn_kwargs={
@@ -120,8 +118,8 @@ def load_sft(path: str, split: str, loadargs: LoadArgs) -> Dataset:
 @register_loader("vqa", "verl", "train", default_src=None)
 @register_loader("vqa", "verl", "val", default_src=None)
 @register_loader("vqa", "verl", "test", default_src=None)
-def load_verl(path: str, split: str, loadargs: LoadArgs) -> Dataset:
-    d = load_dataset(path, split={"val": "validation"}.get(split, split))
+def load_verl(path: str, split: str, loadargs: LoadArgs) -> "Dataset":
+    d = adaptive_load_dataset(path, split={"val": "validation"}.get(split, split))
     d = d.map(
         auto_verl,
         fn_kwargs={

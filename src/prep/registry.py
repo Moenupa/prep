@@ -35,8 +35,10 @@ class FormatterArgs:
     def save_dir(self, save_dir: Path) -> Path:
         return save_dir / self.target_format / self.data_id
 
-    def save_path(self, save_dir: Path, parquet: bool) -> Path:
-        save_path = self.save_dir(save_dir) / self.split
+    def save_path(
+        self, save_dir: Path, parquet: bool, split: Split | None = None
+    ) -> Path:
+        save_path = self.save_dir(save_dir) / (split or self.split)
         if parquet:
             save_path = save_path.with_suffix(".parquet")
         return save_path
@@ -51,8 +53,8 @@ class FormatterArgs:
 
             # either parquet exists or folder unempty
             splits[split] = (
-                any(self.save_path(save_dir, parquet=False).glob("*"))
-                or self.save_path(save_dir, parquet=True).exists()
+                any(self.save_path(save_dir, parquet=False, split=split).glob("*"))
+                or self.save_path(save_dir, parquet=True, split=split).exists()
             )
         return splits
 

@@ -2,12 +2,8 @@ from pathlib import Path
 
 import typer
 
-from . import constants, formatter  # noqa: F401 # trigger formatter registration
 from .args import LoadArgs, RuntimeArgs, _DataFormat, _Split
-from .constants import get_logger
 from .registry import FormatterArgs, status_table
-
-logger = get_logger(__name__)
 
 
 def prep_dataset(

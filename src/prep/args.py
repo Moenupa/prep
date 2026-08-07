@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
@@ -31,13 +31,9 @@ def get_valid_formats():
 @dataclass(frozen=True)
 class LoadArgs:
     num_proc: int
-    question_cols: list[str] = field(
-        default_factory=lambda: ["question", "Question", "problem", "Problem"]
-    )
-    question_template: str = "{question}"
-    answer_cols: list[str] = field(
-        default_factory=lambda: ["answer", "Answer", "solution", "label"]
-    )
+    question_cols: list[str]
+    question_template: str
+    answer_cols: list[str]
 
     def __post_init__(self):
         if self.num_proc <= 0:
