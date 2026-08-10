@@ -43,14 +43,13 @@ def test_load_args_validate_required_fields() -> None:
 def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
     runtime = RuntimeArgs(
         override_src=None,
-        show_first_n=1,
+        save=True,
         save_dir=tmp_path / "artifacts",
         save_parquet=False,
         hf=True,
         hf_repo="repo",
         hf_subset="subset",
         hf_private=True,
-        dry_run=False,
     )
     dataset = pytest.Mock() if hasattr(pytest, "Mock") else None
     if dataset is None:
@@ -58,10 +57,10 @@ def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
 
         dataset = Mock()
 
-    runtime.save(dataset, runtime.save_dir / "train")
+    runtime.do_save(dataset, runtime.save_dir / "train")
     dataset.save_to_disk.assert_called_once_with(runtime.save_dir / "train")
 
-    runtime.upload(dataset, split="train")
+    runtime.do_upload(dataset, split="train")
     dataset.push_to_hub.assert_called_once_with(
         repo_id="repo",
         config_name="subset",
@@ -71,15 +70,14 @@ def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
 
     dry_runtime = RuntimeArgs(
         override_src=None,
-        show_first_n=0,
+        save=True,
         save_dir=tmp_path / "dry",
         save_parquet=True,
         hf=True,
         hf_repo="repo",
         hf_subset="subset",
         hf_private=False,
-        dry_run=True,
     )
     dry_dataset = Dataset.from_list([{"question": "Q", "answer": "A"}])
-    dry_runtime.save(dry_dataset, dry_runtime.save_dir / "train.parquet")
-    dry_runtime.upload(dry_dataset, split="train")
+    dry_runtime.do_save(dry_dataset, dry_runtime.save_dir / "train.parquet")
+    dry_runtime.do_upload(dry_dataset, split="train")

@@ -28,6 +28,6 @@ def is_env_enabled(env_var: str, default: str = "0") -> bool:
 def first_value(entry: dict, keys: list[str]) -> Any | None:
     """Return the value for the first key that exists in entry."""
     for key in keys:
-        if val := entry.get(key):
-            return val
+        if entry.get(key) is not None:
+            return entry.get(key)
     return None

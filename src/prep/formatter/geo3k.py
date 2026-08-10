@@ -1,12 +1,12 @@
-from datasets import Dataset, load_dataset
+from datasets import load_dataset
 
-from ..args import LoadArgs
+from ..args import DatasetPrepStream, LoadArgs
 from ..registry import register_loader
 
 
 @register_loader("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
 @register_loader("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
-def load(path: str, split: str, loadargs: LoadArgs) -> Dataset:
+def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
     d = d.map(
         lambda e, idx: {
@@ -36,7 +36,7 @@ def load(path: str, split: str, loadargs: LoadArgs) -> Dataset:
 
 @register_loader("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
 @register_loader("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
-def load_sft(path: str, split: str, loadargs: LoadArgs) -> Dataset:
+def load_sft(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
     d = d.map(
         lambda e, idx: {

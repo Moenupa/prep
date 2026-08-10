@@ -2,10 +2,17 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from datasets import Dataset
+from rich.filesize import decimal
 from rich.table import Table
 
-from .args import DataFormat, LoadArgs, LoadFn, Split, get_valid_splits
+from .args import (
+    DataFormat,
+    DatasetPrepStream,
+    LoadArgs,
+    LoadFn,
+    Split,
+    get_valid_splits,
+)
 from .constants import get_logger
 from .validator import sft_mm_features, validate_openai_messages, verl_mm_features
 
@@ -17,23 +24,23 @@ _DATASET_REGISTRY: dict[tuple[str, DataFormat, Split], "FormatterPipeline"] = {}
 
 @dataclass(frozen=True)
 class FormatterArgs:
-    data_id: str
+    id_: str
     target_format: DataFormat
     split: Split
 
     def __post_init__(self):
-        if (self.data_id, self.target_format, self.split) not in _DATASET_REGISTRY:
+        if (self.id_, self.target_format, self.split) not in _DATASET_REGISTRY:
             raise ValueError(f"Undefined pipeline for {self}.")
 
     def __str__(self) -> str:
-        return f"Formatter(data_id={self.data_id!r}, target_format={self.target_format!r}, split={self.split!r})"
+        return f"Formatter(id={self.id_!r}, target_format={self.target_format!r}, split={self.split!r})"
 
     @property
     def pipeline(self) -> "FormatterPipeline":
-        return _DATASET_REGISTRY[(self.data_id, self.target_format, self.split)]
+        return _DATASET_REGISTRY[(self.id_, self.target_format, self.split)]
 
     def save_dir(self, save_dir: Path) -> Path:
-        return save_dir / self.target_format / self.data_id
+        return save_dir / self.target_format / self.id_
 
     def save_path(
         self, save_dir: Path, parquet: bool, split: Split | None = None
@@ -47,7 +54,7 @@ class FormatterArgs:
         splits = {}
         for split in get_valid_splits():
             # not even registered, then None
-            if (self.data_id, self.target_format, split) not in _DATASET_REGISTRY:
+            if (self.id_, self.target_format, split) not in _DATASET_REGISTRY:
                 splits[split] = None
                 continue
 
@@ -66,7 +73,7 @@ class FormatterPipeline(FormatterArgs):
 
     def __post_init__(self):
         # delibrate skipping check-exist, because this applies to registeration
-        if (self.data_id, self.target_format, self.split) in _DATASET_REGISTRY:
+        if (self.id_, self.target_format, self.split) in _DATASET_REGISTRY:
             raise ValueError(f"Pipeline already registered for {self}.")
 
     @property
@@ -94,11 +101,11 @@ class FormatterPipeline(FormatterArgs):
                     f"Mismatch: number of images {n_img} != {n_tags} {image_tag} tags."
                 )
 
-    def load(self, override_src: str | None, loadargs: LoadArgs) -> Dataset:
+    def load(self, override_src: str | None, loadargs: LoadArgs) -> DatasetPrepStream:
         path = override_src or self.default_src
         if path is None:
             raise ValueError(
-                f"Dataset {self.data_id!r} has no local/remote source to load from."
+                f"Dataset {self.id_!r} has no local/remote source to load from."
                 " Pass --src to override or register a default source in loading function."
             )
         d = self.load_fn(path, self.split, loadargs)
@@ -109,25 +116,28 @@ class FormatterPipeline(FormatterArgs):
                 case "sft":
                     d = d.cast(sft_mm_features)
         except Exception as e:
-            logger.error(f"⚠️\tCasting failed {str(self)}\n⚠️ {e}")
+            logger.error(f"⚠️\tCasting failed {str(self)}\n⚠️\t{e}")
         try:
             self.check_sample(d[0], image_tag="<image>")
         except Exception as e:
-            logger.error(f"⚠️\tValidation failed {str(self)}\n⚠️ {e}")
+            logger.error(f"⚠️\tValidation failed {str(self)}\n⚠️\t{e}")
 
+        loadargs.peek(d)
         return d
 
 
 def register_loader(
-    data_id: str,
-    data_format: DataFormat,
+    id_: str,
+    target_format: DataFormat,
     split: Split,
     default_src: str | None = None,
 ) -> Callable[[LoadFn], LoadFn]:
     def decorator(function: LoadFn) -> LoadFn:
-        _DATASET_REGISTRY[(data_id, data_format, split)] = FormatterPipeline(
-            data_id=data_id,
-            target_format=data_format,
+        assert "/" not in id_, "pipeline ID should not contain '/'"
+
+        _DATASET_REGISTRY[(id_, target_format, split)] = FormatterPipeline(
+            id_=id_,
+            target_format=target_format,
             split=split,
             load_fn=function,
             default_src=default_src,
@@ -135,6 +145,15 @@ def register_loader(
         return function
 
     return decorator
+
+
+def get_folder_size(path: Path | None) -> str:
+    if path is None:
+        return ""
+    return decimal(
+        sum(f.stat().st_size for f in path.rglob("*") if f.is_file()),
+        precision=0,
+    )
 
 
 def status_table(save_dir: Path) -> Table:
@@ -145,13 +164,14 @@ def status_table(save_dir: Path) -> Table:
     table.add_column("Data Format", style="green", no_wrap=True)
     table.add_column("Default Source", style="blue")
     table.add_column("Local Path", style="yellow")
+    table.add_column("Local Size", style="yellow")
     for split in split_names:
         table.add_column(f"{split:5s}", style="yellow", no_wrap=True)
 
     pipelines_by_dataset: dict[tuple[str, DataFormat], list[FormatterPipeline]] = {}
     for pipeline in _DATASET_REGISTRY.values():
         pipelines_by_dataset.setdefault(
-            (pipeline.data_id, pipeline.target_format), []
+            (pipeline.id_, pipeline.target_format), []
         ).append(pipeline)
 
     for (_, _), pipelines in sorted(pipelines_by_dataset.items()):
@@ -168,10 +188,11 @@ def status_table(save_dir: Path) -> Table:
         )
         local_splits = pipeline.find_splits(save_dir)
         table.add_row(
-            pipeline.data_id,
+            pipeline.id_,
             pipeline.target_format,
             default_source or "",
             str(local_path or ""),
+            get_folder_size(local_path),
             *(
                 {True: "✔", False: "✖", None: ""}[local_splits[split]]
                 for split in split_names
