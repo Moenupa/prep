@@ -95,6 +95,9 @@ class FormatterPipeline(FormatterArgs):
                     img_tag=image_tag,
                 )
             case "eval":
+                if not isinstance(sample.get("question"), str):
+                    return
+
                 n_tags = sample["question"].count(image_tag)
                 n_img = len(sample.get("images", []))
                 assert n_tags == n_img, (

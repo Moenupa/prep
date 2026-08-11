@@ -77,14 +77,20 @@ class RuntimeArgs:
     def __post_init__(self):
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
-    def do_save(self, d: "Dataset", save_path: Path):
+    def do_save(self, d: "Dataset", save_path: Path, nproc: int | None = None):
         logger.info(f"{'🌵 DRY\t' if not self.save else '💾\t'} Save -> {save_path!r}")
         if not self.save:
             return
 
-        d.to_parquet(save_path) if self.save_parquet else d.save_to_disk(save_path)
+        if self.save_parquet:
+            # WARN: if {"path": ""} is passed for media features
+            # parquet will not save the binary field (lazy loading)
+            # use save_to_disk instead.
+            d.to_parquet(save_path)
+        else:
+            d.save_to_disk(save_path, num_proc=nproc)
 
-    def do_upload(self, d: "Dataset", split: Split):
+    def do_upload(self, d: "Dataset", split: Split, nproc: int | None = None):
         logger.info(
             f"{'🌵 DRY\t' if not self.hf else '☁️\t'} Upload -> {self.hf_repo!r}"
             f" (subset={self.hf_subset!r}, split={split!r}, private={self.hf_private})"
@@ -95,6 +101,7 @@ class RuntimeArgs:
         d.push_to_hub(
             repo_id=self.hf_repo,
             config_name=self.hf_subset or "default",
-            split=split,
+            split={"val": "validation"}.get(split, split),
             private=self.hf_private,
+            num_proc=nproc,
         )

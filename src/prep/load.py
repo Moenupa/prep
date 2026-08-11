@@ -16,12 +16,12 @@ _FORMATS = {
 }
 
 
-def adaptive_load_dataset(source: str, split: str) -> Dataset:
+def adaptive_load_dataset(source: str, split: str, nproc: int | None = None) -> Dataset:
     path = Path(source)
 
     # non-local -> HF remote
     if not path.exists():
-        return load_dataset(source, split=split)
+        return load_dataset(source, split=split, num_proc=nproc)
 
     # local -> 1. dir 2. file
     elif path.is_dir():

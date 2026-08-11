@@ -24,13 +24,13 @@ def prep_dataset(
     save_dir: Path = typer.Option(
         Path("~/.cache/prep").expanduser(), envvar="SAVE_DIR", rich_help_panel=_SAVE
     ),
-    save_parq: bool = typer.Option(
-        True, envvar="SAVE_PARQ", help="Output parquets/arrow.", rich_help_panel=_SAVE
-    ),
+    save_parq: bool = typer.Option(False, envvar="SAVE_PARQ", rich_help_panel=_SAVE),
+    save_nproc: int | None = typer.Option(None, envvar="SAVE_NPROC", rich_help_panel=_SAVE),
     hf: bool = typer.Option(False, envvar="HF", rich_help_panel=_HF),
     hf_repo: str | None = typer.Option(None, envvar="HF_REPO", rich_help_panel=_HF),
     hf_subset: str | None = typer.Option(None, envvar="HF_SUBSET", rich_help_panel=_HF),
     hf_private: bool = typer.Option(True, envvar="HF_PRIVATE", rich_help_panel=_HF),
+    hf_nproc: int | None = typer.Option(None, envvar="HF_NPROC", rich_help_panel=_HF),
     q_cols: list[str] = typer.Option(
         default=["question", "Question", "problem"],
         envvar="Q_COLS",
@@ -73,9 +73,11 @@ def prep_dataset(
         ),
     )
     runtime.do_save(
-        d, save_path=pipeline.save_path(runtime.save_dir, runtime.save_parquet)
+        d,
+        save_path=pipeline.save_path(runtime.save_dir, runtime.save_parquet),
+        nproc=save_nproc,
     )
-    runtime.do_upload(d, split=pipeline.split)
+    runtime.do_upload(d, split=pipeline.split, nproc=hf_nproc)
 
 
 def prep():

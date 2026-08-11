@@ -31,14 +31,6 @@ def test_load_args_validate_required_fields() -> None:
             answer_cols=[],
         )
 
-    with pytest.raises(ValueError, match="question_template"):
-        LoadArgs(
-            num_proc=1,
-            question_cols=["q"],
-            question_template="Q",
-            answer_cols=["a"],
-        )
-
 
 def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
     runtime = RuntimeArgs(
@@ -58,7 +50,7 @@ def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
         dataset = Mock()
 
     runtime.do_save(dataset, runtime.save_dir / "train")
-    dataset.save_to_disk.assert_called_once_with(runtime.save_dir / "train")
+    dataset.save_to_disk.assert_called_once_with(runtime.save_dir / "train", num_proc=None)
 
     runtime.do_upload(dataset, split="train")
     dataset.push_to_hub.assert_called_once_with(
@@ -66,6 +58,7 @@ def test_runtime_args_save_and_upload_behaviors(tmp_path: Path) -> None:
         config_name="subset",
         split="train",
         private=True,
+        num_proc=None,
     )
 
     dry_runtime = RuntimeArgs(

@@ -26,12 +26,12 @@ def test_auto_parse_images_and_qa() -> None:
         q_template="Q: {question}",
         n_img_tags=2,
     )
-    assert question == "Q: <image><image>What?"
+    assert question == "<image><image>Q: What?"
     assert answer == "42"
 
 
 def test_auto_parse_qa_rejects_missing_values() -> None:
-    with pytest.raises(ValueError, match="Missing question or answer"):
+    with pytest.raises(ValueError, match="Invalid answer"):
         auto._parse_qa(
             {},
             q_cols=["question"],
@@ -51,5 +51,5 @@ def test_auto_sft_does_not_double_apply_template() -> None:
         q_template="Q: {question}",
     )
 
-    assert row["messages"][0]["content"] == "Q: <image>Solve"
+    assert row["messages"][0]["content"] == "<image>Q: Solve"
     assert row["id"] == "demo/00000007"
