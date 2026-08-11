@@ -7,14 +7,11 @@ This file provides agents with information about the project.
 Use `make`, `uv`, `uvx` commands to run code style checks, quality checks, and tests.
 
 ```sh
-# Code style (auto-fix)
-make style
-
-# Code quality check (no modifications)
-make quality
-
-# Run all tests
-make test
+make format-check  # Check code formatting (no fix)
+make format        # Format code
+make lint          # Run lint checks
+make test          # Run tests
+make examples      # Run examples
 
 # Run a single test file
 uv run pytest tests/path/to/test_file.py

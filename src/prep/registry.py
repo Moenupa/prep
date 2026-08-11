@@ -19,7 +19,7 @@ from .validator import sft_mm_features, validate_openai_messages, verl_mm_featur
 logger = get_logger(__name__)
 
 
-_DATASET_REGISTRY: dict[tuple[str, DataFormat, Split], "FormatterPipeline"] = {}
+_FORMATTER_REGISTRY: dict[tuple[str, DataFormat, Split], "FormatterPipeline"] = {}
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class FormatterArgs:
     split: Split
 
     def __post_init__(self):
-        if (self.id_, self.target_format, self.split) not in _DATASET_REGISTRY:
+        if (self.id_, self.target_format, self.split) not in _FORMATTER_REGISTRY:
             raise ValueError(f"Undefined pipeline for {self}.")
 
     def __str__(self) -> str:
@@ -37,7 +37,7 @@ class FormatterArgs:
 
     @property
     def pipeline(self) -> "FormatterPipeline":
-        return _DATASET_REGISTRY[(self.id_, self.target_format, self.split)]
+        return _FORMATTER_REGISTRY[(self.id_, self.target_format, self.split)]
 
     def save_dir(self, save_dir: Path) -> Path:
         return save_dir / self.target_format / self.id_
@@ -54,7 +54,7 @@ class FormatterArgs:
         splits = {}
         for split in get_valid_splits():
             # not even registered, then None
-            if (self.id_, self.target_format, split) not in _DATASET_REGISTRY:
+            if (self.id_, self.target_format, split) not in _FORMATTER_REGISTRY:
                 splits[split] = None
                 continue
 
@@ -72,8 +72,8 @@ class FormatterPipeline(FormatterArgs):
     default_src: str | None
 
     def __post_init__(self):
-        # delibrate skipping check-exist, because this applies to registeration
-        if (self.id_, self.target_format, self.split) in _DATASET_REGISTRY:
+        # deliberate skipping check-exist, because this applies to registration
+        if (self.id_, self.target_format, self.split) in _FORMATTER_REGISTRY:
             raise ValueError(f"Pipeline already registered for {self}.")
 
     @property
@@ -135,7 +135,7 @@ def register_loader(
     def decorator(function: LoadFn) -> LoadFn:
         assert "/" not in id_, "pipeline ID should not contain '/'"
 
-        _DATASET_REGISTRY[(id_, target_format, split)] = FormatterPipeline(
+        _FORMATTER_REGISTRY[(id_, target_format, split)] = FormatterPipeline(
             id_=id_,
             target_format=target_format,
             split=split,
@@ -169,7 +169,7 @@ def status_table(save_dir: Path) -> Table:
         table.add_column(f"{split:5s}", style="yellow", no_wrap=True)
 
     pipelines_by_dataset: dict[tuple[str, DataFormat], list[FormatterPipeline]] = {}
-    for pipeline in _DATASET_REGISTRY.values():
+    for pipeline in _FORMATTER_REGISTRY.values():
         pipelines_by_dataset.setdefault(
             (pipeline.id_, pipeline.target_format), []
         ).append(pipeline)

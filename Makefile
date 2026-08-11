@@ -1,4 +1,4 @@
-.PHONY: style style-check quality test
+.PHONY: help format-check format lint test examples
 
 check_dirs := src tests
 
@@ -6,21 +6,29 @@ check_dirs := src tests
 TOOL := $(shell command -v uv >/dev/null 2>&1 && echo "uvx" || echo "")
 RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run" || echo "")
 
-all: style quality
+all: format lint
 
-# check for style, do nothing
-style-check:
+help:
+	@echo "Available targets:"
+	@echo "  format-check:  Check code formatting (no fix)"
+	@echo "  format:        Format code"
+	@echo "  lint:          Run lint checks"
+	@echo "  test:          Run tests"
+	@echo "  examples:      Run examples"
+
+format-check:
 	$(TOOL) ruff check $(check_dirs)
 	$(TOOL) ruff format --check $(check_dirs)
 
-# check for style, and fix issues
-style:
+format:
 	$(TOOL) ruff check $(check_dirs) --fix
 	$(TOOL) ruff format $(check_dirs)
 
-# code quality checks
-quality:
+lint:
 	$(TOOL) ty check $(check_dirs)
 
 test:
 	$(RUN) pytest tests
+
+examples:
+	$(MAKE) -C examples

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from datasets import Dataset, DatasetDict, load_dataset
+from datasets import Dataset, DatasetDict, load_dataset, load_from_disk
 
 _FORMATS = {
     ".parquet": "parquet",
@@ -16,29 +16,24 @@ _FORMATS = {
 }
 
 
-def _dataset(path: str) -> Dataset | None:
-    try:
-        return Dataset.load_from_disk(path)
-    except Exception:
-        return None
-
-
-def _dataset_dict(path: str, split: str) -> Dataset | None:
-    try:
-        return DatasetDict.load_from_disk(path)[split]
-    except Exception:
-        return None
-
-
 def adaptive_load_dataset(source: str, split: str) -> Dataset:
     path = Path(source)
+
+    # non-local -> HF remote
     if not path.exists():
         return load_dataset(source, split=split)
+
+    # local -> 1. dir 2. file
     elif path.is_dir():
-        d = _dataset(source) or _dataset_dict(source, split)
-        if d is None:
-            raise ValueError(f"Failed to load from local folder {source!r}")
-        return d
+        try:
+            d = load_from_disk(source)
+            if isinstance(d, DatasetDict):
+                return d[split]
+            if isinstance(d, Dataset):
+                return d
+            raise RuntimeError(f"Loaded not Dataset nor DatasetDict: {type(d)} {d}")
+        except Exception as e:
+            raise ValueError(f"Failed to load from local folder {source!r}") from e
     elif path.is_file():
         if path.suffix not in _FORMATS:
             raise ValueError(f"Unsupported file format: {path.suffix!r}")

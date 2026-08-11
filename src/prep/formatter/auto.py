@@ -40,6 +40,7 @@ def _parse_qa(
     else:
         question = first_value(e, q_cols)
         answer = first_value(e, a_cols)
+    question = question or ""
 
     if isinstance(answer, int):
         answer = chr(65 + answer)  # convert 0-based index to A/B/C/D
@@ -47,7 +48,7 @@ def _parse_qa(
         raise ValueError(f"Invalid answer {type(answer)} {answer!r} in example: {e}")
 
     # pad <image> tags if not present in question or template
-    if "<image>" not in (question or "") and "{im_tags}" not in q_template:
+    if "<image>" not in question and "{im_tags}" not in q_template:
         q_template = "{im_tags}" + q_template
 
     return q_template.format(
