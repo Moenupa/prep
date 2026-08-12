@@ -22,7 +22,14 @@ _FORMATS = {
 }
 
 
-def resolve_split(split: str, available: list[str]) -> str:
+def resolve_split(split: str | None, available: list[str]) -> str:
+    if split is None:
+        if len(available) == 1:
+            return available[0]
+        raise ValueError(
+            f"Split must be specified for dataset with multiple splits: {available}"
+        )
+
     # direct hit is preferred
     if split in available:
         return split
@@ -35,7 +42,7 @@ def resolve_split(split: str, available: list[str]) -> str:
     raise ValueError(f"Split {split!r} not found in dataset: {available}")
 
 
-def load_local(source: str, split: str) -> Dataset | None:
+def load_local(source: str, split: str | None = None) -> Dataset | None:
     try:
         d = load_from_disk(source)
     except Exception:
@@ -51,32 +58,38 @@ def load_local(source: str, split: str) -> Dataset | None:
 
 
 def adaptive_load_dataset(
-    source: str, split: str, nproc: int | None = None, subset: str | None = None
+    source: str,
+    split: str | None = None,
+    nproc: int | None = None,
+    subset: str | None = None,
 ) -> Dataset:
     path = Path(source)
 
     d = None
     # non-local -> HF remote
     if not path.exists():
+        if split is None:
+            raise ValueError("Split must be specified for remote datasets.")
         return load_dataset(
             source,
-            subset=subset,
-            split=resolve_split(split, get_dataset_split_names(source, subset=subset)),
+            subset,
+            split=resolve_split(split, get_dataset_split_names(source, subset)),
             num_proc=nproc,
         )
 
     # local -> 1. dir 2. file
     elif path.is_dir():
-        d = load_local(source, split) or load_dataset(
-            source, subset=subset, split=split, num_proc=nproc
-        )
-        return d
+        d = load_local(source, split)
+        # try to load from locally hf-downloaded datasets
+        if d is None and split is not None:
+            d = load_dataset(source, subset, split=split, num_proc=nproc)
     elif path.is_file():
         if path.suffix not in _FORMATS:
             raise ValueError(f"Unsupported file format: {path.suffix!r}")
 
         d = load_dataset(_FORMATS[path.suffix], data_files=[source], split="train")
-        return d
 
     if d is None:
         raise ValueError(f"Invalid source path: {source!r}")
+
+    return d
