@@ -35,8 +35,8 @@ uv run pytest tests/path/to/test_file.py
 ## Adding Support for a New Dataset
 
 - Run `uv run ppls` to see if it is already supported, then check whether `src/prep/formatter/auto.py` can convert it with the generic loaders.
-- If the generic loader is not enough, add a dataset-specific formatter module under `src/prep/formatter/` and register loaders with `register_loader(...)` for each supported target format/split.
-- Prefer keeping dataset-specific field mapping inside the formatter module and shared validation/feature logic inside `prep.registry` or `prep.validator`.
+- If the generic formatter is not enough, add a dataset-specific formatter module under `src/prep/formatter/` and register it with `@formatter(...)` for each supported target formatand split. A good example is `src/prep/formatter/geo3k.py`.
+- Prefer keeping dataset-specific field mapping inside the formatter module. Validation and schema definitions should be shared in `src/prep/validator.py` to keep the formatter modules clean.
 
 ## Code Style
 

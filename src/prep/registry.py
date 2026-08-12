@@ -11,6 +11,7 @@ from .args import (
     LoadArgs,
     LoadFn,
     Split,
+    get_valid_formats,
     get_valid_splits,
 )
 from .constants import get_logger
@@ -34,6 +35,9 @@ class FormatterArgs:
 
     def __str__(self) -> str:
         return f"Formatter(id={self.id_!r}, target_format={self.target_format!r}, split={self.split!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     @property
     def pipeline(self) -> "FormatterPipeline":
@@ -75,6 +79,12 @@ class FormatterPipeline(FormatterArgs):
         # deliberate skipping check-exist, because this applies to registration
         if (self.id_, self.target_format, self.split) in _FORMATTER_REGISTRY:
             raise ValueError(f"Pipeline already registered for {self}.")
+
+    def __str__(self) -> str:
+        return f"Formatter(id={self.id_!r}, target_format={self.target_format!r}, split={self.split!r}, default_src={self.default_src!r})"
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     @property
     def pipeline(self) -> "FormatterPipeline":
@@ -129,7 +139,7 @@ class FormatterPipeline(FormatterArgs):
         return d
 
 
-def register_loader(
+def formatter(
     id_: str,
     target_format: DataFormat,
     split: Split,
@@ -145,6 +155,9 @@ def register_loader(
             load_fn=function,
             default_src=default_src,
         )
+        logger.debug(
+            f"🗂\tRegistered {id_!r} (fmt={target_format!r}, split={split!r}, src={default_src!r})"
+        )
         return function
 
     return decorator
@@ -159,47 +172,38 @@ def get_folder_size(path: Path | None) -> str:
     )
 
 
-def status_table(save_dir: Path) -> Table:
+def status_table(save_dir: Path):
+    pipelines_by_dataset: dict[tuple[str, DataFormat], FormatterPipeline] = {}
+    for pipeline in _FORMATTER_REGISTRY.values():
+        pipelines_by_dataset[(pipeline.id_, pipeline.target_format)] = pipeline
     split_names = get_valid_splits()
 
-    table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("Dataset ID", style="cyan", no_wrap=True)
-    table.add_column("Data Format", style="green", no_wrap=True)
-    table.add_column("Default Source", style="blue")
-    table.add_column("Local Path", style="yellow")
-    table.add_column("Local Size", style="yellow")
-    for split in split_names:
-        table.add_column(f"{split:5s}", style="yellow", no_wrap=True)
+    for each_format in get_valid_formats():
+        table = Table(show_header=True, title=each_format, header_style="bold magenta")
+        table.add_column("ID", style="cyan", no_wrap=True)
+        table.add_column("Default Source", style="green")
+        table.add_column("Local Path", style="blue")
+        table.add_column("Size", style="yellow")
+        for split in split_names:
+            table.add_column(split, style="yellow", no_wrap=True)
 
-    pipelines_by_dataset: dict[tuple[str, DataFormat], list[FormatterPipeline]] = {}
-    for pipeline in _FORMATTER_REGISTRY.values():
-        pipelines_by_dataset.setdefault(
-            (pipeline.id_, pipeline.target_format), []
-        ).append(pipeline)
+        for (_, target_format_), pipeline in sorted(pipelines_by_dataset.items()):
+            if target_format_ != each_format:
+                continue
+            local_dir = pipeline.save_dir(save_dir)
+            if not local_dir.exists() or not any(local_dir.glob("*")):
+                local_dir = None
 
-    for (_, _), pipelines in sorted(pipelines_by_dataset.items()):
-        pipeline = pipelines[0]
-        local_path = pipeline.save_dir(save_dir)
-        if not local_path.exists() or not any(local_path.glob("*")):
-            local_path = None
-
-        default_sources = {pipeline.default_src for pipeline in pipelines}
-        default_source = (
-            next(iter(default_sources))
-            if len(default_sources) == 1
-            else ", ".join(sorted(source for source in default_sources if source))
-        )
-        local_splits = pipeline.find_splits(save_dir)
-        table.add_row(
-            pipeline.id_,
-            pipeline.target_format,
-            default_source or "",
-            str(local_path or ""),
-            get_folder_size(local_path),
-            *(
-                {True: "✔", False: "✖", None: ""}[local_splits[split]]
-                for split in split_names
-            ),
-            style=None if local_path is not None else "dim",
-        )
-    return table
+            local_splits = pipeline.find_splits(save_dir)
+            table.add_row(
+                pipeline.id_,
+                pipeline.default_src or "",
+                str(local_dir or ""),
+                get_folder_size(local_dir),
+                *(
+                    {True: "✔", False: "✖", None: ""}[local_splits[split]]
+                    for split in split_names
+                ),
+                style=None if local_dir is not None else "dim",
+            )
+        yield table

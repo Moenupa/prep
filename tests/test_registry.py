@@ -4,17 +4,17 @@ from pathlib import Path
 from datasets import Dataset
 
 from prep.args import LoadArgs
-from prep.registry import FormatterArgs, register_loader, status_table
+from prep.registry import FormatterArgs, formatter
 
 
 def test_formatter_args_find_splits_uses_each_registered_split(tmp_path: Path) -> None:
     id_ = f"dataset-{uuid.uuid4().hex}"
 
-    @register_loader(id_, "sft", "train", "src")
+    @formatter(id_, "sft", "train", "src")
     def _train_loader(path: str, split: str, loadargs: LoadArgs):
         return None
 
-    @register_loader(id_, "sft", "test", "src")
+    @formatter(id_, "sft", "test", "src")
     def _test_loader(path: str, split: str, loadargs: LoadArgs):
         return None
 
@@ -34,7 +34,7 @@ def test_formatter_args_find_splits_uses_each_registered_split(tmp_path: Path) -
 def test_formatter_pipeline_load_casts_and_validates() -> None:
     id_ = f"pipeline-{uuid.uuid4().hex}"
 
-    @register_loader(id_, "sft", "train", "src")
+    @formatter(id_, "sft", "train", "src")
     def _loader(path: str, split: str, loadargs: LoadArgs):
         return Dataset.from_list(
             [
@@ -67,17 +67,3 @@ def test_formatter_pipeline_load_casts_and_validates() -> None:
     )
 
     assert dataset[0]["id"] == "x"
-
-
-def test_status_table_reports_registered_dataset(tmp_path: Path) -> None:
-    id_ = f"status-{uuid.uuid4().hex}"
-
-    @register_loader(id_, "verl", "train", "hf/source")
-    def _loader(path: str, split: str, loadargs: LoadArgs):
-        return None
-
-    table = status_table(tmp_path)
-    rendered = [column.header for column in table.columns]
-
-    assert rendered[:4] == ["Dataset ID", "Data Format", "Default Source", "Local Path"]
-    assert any(cell == id_ for column in table.columns for cell in column._cells)

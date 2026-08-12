@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from datasets import Dataset, DatasetDict, load_dataset, load_from_disk
+from datasets import (
+    Dataset,
+    DatasetDict,
+    get_dataset_split_names,
+    load_dataset,
+    load_from_disk,
+)
 
 _FORMATS = {
     ".parquet": "parquet",
@@ -16,24 +22,55 @@ _FORMATS = {
 }
 
 
-def adaptive_load_dataset(source: str, split: str, nproc: int | None = None) -> Dataset:
+def resolve_split(split: str, available: list[str]) -> str:
+    # direct hit is preferred
+    if split in available:
+        return split
+
+    # translate if "val" -> "validation" if exists
+    # we want to be generous here to facilitate IO
+    if split == "val" and "validation" in available:
+        return "validation"
+
+    raise ValueError(f"Split {split!r} not found in dataset: {available}")
+
+
+def load_local(source: str, split: str) -> Dataset | None:
+    try:
+        d = load_from_disk(source)
+    except Exception:
+        return None
+
+    if isinstance(d, Dataset):
+        return d
+
+    if not isinstance(d, DatasetDict):
+        raise RuntimeError(f"Unexpected dataset type: {type(d)} {d}")
+
+    return d[resolve_split(split, list(map(str, d.keys())))]
+
+
+def adaptive_load_dataset(
+    source: str, split: str, nproc: int | None = None, subset: str | None = None
+) -> Dataset:
     path = Path(source)
 
+    d = None
     # non-local -> HF remote
     if not path.exists():
-        return load_dataset(source, split=split, num_proc=nproc)
+        return load_dataset(
+            source,
+            subset=subset,
+            split=resolve_split(split, get_dataset_split_names(source, subset=subset)),
+            num_proc=nproc,
+        )
 
     # local -> 1. dir 2. file
     elif path.is_dir():
-        try:
-            d = load_from_disk(source)
-            if isinstance(d, DatasetDict):
-                return d[split]
-            if isinstance(d, Dataset):
-                return d
-            raise RuntimeError(f"Loaded not Dataset nor DatasetDict: {type(d)} {d}")
-        except Exception as e:
-            raise ValueError(f"Failed to load from local folder {source!r}") from e
+        d = load_local(source, split) or load_dataset(
+            source, subset=subset, split=split, num_proc=nproc
+        )
+        return d
     elif path.is_file():
         if path.suffix not in _FORMATS:
             raise ValueError(f"Unsupported file format: {path.suffix!r}")
@@ -41,4 +78,5 @@ def adaptive_load_dataset(source: str, split: str, nproc: int | None = None) -> 
         d = load_dataset(_FORMATS[path.suffix], data_files=[source], split="train")
         return d
 
-    raise ValueError(f"Invalid source path: {source!r}")
+    if d is None:
+        raise ValueError(f"Invalid source path: {source!r}")

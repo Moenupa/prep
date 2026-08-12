@@ -18,8 +18,8 @@ dependencies = [
 ]
 
 [project.scripts]
-prep = "prep.cli:prep"
-ppls = "prep.cli:status"
+prep = "prep.cli:prep_cli"
+ppls = "prep.cli:ppls_cli"
 
 [dependency-groups]
 dev = [

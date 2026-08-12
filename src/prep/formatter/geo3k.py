@@ -1,13 +1,14 @@
 from datasets import load_dataset
 
 from ..args import DatasetPrepStream, LoadArgs
-from ..registry import register_loader
+from ..registry import formatter
 
 
-@register_loader("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
-@register_loader("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
+@formatter("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
+@formatter("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
 def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
+    # geo3k has 3 columns: images: list[Image], problem: str, answer: str
     d = d.map(
         lambda e, idx: {
             "images": e["images"],
@@ -23,8 +24,8 @@ def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
             "extra_info": {
                 "split": split,
                 "index": f"{idx:08d}",
-                "explanation": e.get("explanation", ""),
-                "misc": e.get("misc", ""),
+                "explanation": "",
+                "misc": "",
             },
         },
         remove_columns=d.column_names,  # remove original columns
@@ -34,8 +35,8 @@ def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     return d
 
 
-@register_loader("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
-@register_loader("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
+@formatter("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
+@formatter("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
 def load_sft(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
     d = d.map(
@@ -49,7 +50,7 @@ def load_sft(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
             # ideally this should include 'data_source/index'
             "id": f"geo3k/{idx:08d}",
             # dump a json string here for any miscellaneous info
-            "extra_info": e.get("misc", ""),
+            "extra_info": "",
         },
         remove_columns=d.column_names,
         num_proc=loadargs.num_proc,

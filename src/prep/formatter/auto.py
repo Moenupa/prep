@@ -1,7 +1,7 @@
 from ..args import DatasetPrepStream, LoadArgs
 from ..constants import first_value, get_logger
 from ..load import adaptive_load_dataset
-from ..registry import register_loader
+from ..registry import formatter
 
 logger = get_logger(__name__)
 
@@ -132,11 +132,11 @@ def auto_verl(
     }
 
 
-@register_loader("vqa", "sft", "train", default_src=None)
-@register_loader("vqa", "sft", "val", default_src=None)
-@register_loader("vqa", "sft", "test", default_src=None)
+@formatter("vqa", "sft", "train", default_src=None)
+@formatter("vqa", "sft", "val", default_src=None)
+@formatter("vqa", "sft", "test", default_src=None)
 def load_sft(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
-    d = adaptive_load_dataset(path, split={"val": "validation"}.get(split, split))
+    d = adaptive_load_dataset(path, split=split, nproc=loadargs.num_proc)
     loadargs.peek(d, level=10)
     d = d.map(
         auto_sft,
@@ -153,11 +153,11 @@ def load_sft(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
     return d
 
 
-@register_loader("vqa", "verl", "train", default_src=None)
-@register_loader("vqa", "verl", "val", default_src=None)
-@register_loader("vqa", "verl", "test", default_src=None)
+@formatter("vqa", "verl", "train", default_src=None)
+@formatter("vqa", "verl", "val", default_src=None)
+@formatter("vqa", "verl", "test", default_src=None)
 def load_verl(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
-    d = adaptive_load_dataset(path, split={"val": "validation"}.get(split, split))
+    d = adaptive_load_dataset(path, split=split, nproc=loadargs.num_proc)
     loadargs.peek(d, level=10)
     d = d.map(
         auto_verl,

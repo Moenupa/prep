@@ -1,15 +1,15 @@
 from datasets import load_dataset
 
 from ..args import DatasetPrepStream, LoadArgs
-from ..registry import register_loader
+from ..registry import formatter
 from .auto import auto_sft, auto_verl
 
 _NAME = "MedThinkVQA"
 _SRC = "CAIR-M3LLM/MedThinkVQA"
 
 
-@register_loader(_NAME, "verl", "train", default_src=_SRC)
-@register_loader(_NAME, "verl", "test", default_src=_SRC)
+@formatter(_NAME, "verl", "train", default_src=_SRC)
+@formatter(_NAME, "verl", "test", default_src=_SRC)
 def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
     # yield d
@@ -32,8 +32,8 @@ def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     return d
 
 
-@register_loader(_NAME, "sft", "train", default_src=_SRC)
-@register_loader(_NAME, "sft", "test", default_src=_SRC)
+@formatter(_NAME, "sft", "train", default_src=_SRC)
+@formatter(_NAME, "sft", "test", default_src=_SRC)
 def load_caption(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
     d = load_dataset(path, split=split)
 

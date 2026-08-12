@@ -31,3 +31,15 @@ def first_value(entry: dict, keys: list[str]) -> Any | None:
         if entry.get(key) is not None:
             return entry.get(key)
     return None
+
+
+DEFAULT_QCOLS = ["question", "Question", "problem"]
+DEFAULT_ACOLS = [
+    "answer",
+    "Answer",
+    "solution",
+    "label",
+    "caption",
+    "correct_answer",
+    "reports",
+]
