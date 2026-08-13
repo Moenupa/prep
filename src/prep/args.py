@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, get_args
 
+import typer
 from datasets import Dataset
 
 from .constants import get_logger
@@ -65,11 +66,11 @@ class RuntimeArgs:
     # arguments only known at runtime
     override_src: str | None
 
-    save: bool
+    save: bool | None
     save_dir: Path
     save_parquet: bool
 
-    hf: bool
+    hf: bool | None
     hf_repo: str
     hf_subset: str | None
     hf_private: bool
@@ -78,8 +79,13 @@ class RuntimeArgs:
         self.save_dir.mkdir(parents=True, exist_ok=True)
 
     def do_save(self, d: "Dataset", save_path: Path, nproc: int | None = None):
-        logger.info(f"{'🌵 DRY\t' if not self.save else '💾\t'} Save -> {save_path!r}")
-        if not self.save:
+        logger.info(f"💾\tWould Save -> {save_path!r}")
+        if self.save is None:
+            do_save = typer.confirm("Save it?", default=False)
+        else:
+            do_save = self.save
+
+        if do_save is False:
             return
 
         if self.save_parquet:
@@ -92,10 +98,15 @@ class RuntimeArgs:
 
     def do_upload(self, d: "Dataset", split: Split, nproc: int | None = None):
         logger.info(
-            f"{'🌵 DRY\t' if not self.hf else '☁️\t'} Upload -> {self.hf_repo!r}"
+            f"☁️\tWould Upload -> {self.hf_repo!r}"
             f" (subset={self.hf_subset!r}, split={split!r}, private={self.hf_private})"
         )
-        if not self.hf:
+        if self.hf is None:
+            do_upload = typer.confirm("Upload to HuggingFace Hub?", default=False)
+        else:
+            do_upload = self.hf
+
+        if do_upload is False:
             return
 
         d.push_to_hub(

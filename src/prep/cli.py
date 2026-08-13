@@ -21,7 +21,7 @@ def prep(
     src: str | None = typer.Option(None, envvar="SRC", help="Source, HF/local path."),
     show: int = typer.Option(3, envvar="SHOW", help="Preview first n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
-    save: bool = typer.Option(True, envvar="SAVE", rich_help_panel=_SAVE),
+    save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
     save_dir: Path = typer.Option(
         Path("out"), envvar="SAVE_DIR", rich_help_panel=_SAVE
     ),
@@ -29,7 +29,7 @@ def prep(
     save_nproc: int | None = typer.Option(
         None, envvar="SAVE_NPROC", rich_help_panel=_SAVE
     ),
-    hf: bool = typer.Option(False, envvar="HF", rich_help_panel=_HF),
+    hf: bool | None = typer.Option(None, envvar="HF", rich_help_panel=_HF),
     hf_repo: str | None = typer.Option(None, envvar="HF_REPO", rich_help_panel=_HF),
     hf_subset: str | None = typer.Option(None, envvar="HF_SUBSET", rich_help_panel=_HF),
     hf_private: bool = typer.Option(True, envvar="HF_PRIVATE", rich_help_panel=_HF),

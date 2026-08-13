@@ -8,7 +8,7 @@ verl_mm_features = Features(
     prompt=List(
         {
             "role": Value("string"),
-            "content": Value("string"),
+            "content": Value("large_string"),
         }
     ),
     ability=Value("string"),
@@ -20,10 +20,10 @@ verl_mm_features = Features(
         "split": Value("string"),
         "index": Value("string"),
         # feedback, CoT, or hint to guide better answers
-        "explanation": Value("string"),
+        "explanation": Value("large_string"),
         # any miscellaneous info accepting json.dumps() stuff
         # this is for compatiblity with multiple datasets, supporting any structure
-        "misc": Value("string"),
+        "misc": Value("large_string"),
     },
 )
 
@@ -32,11 +32,11 @@ sft_mm_features = Features(
     messages=List(
         {
             "role": Value("string"),
-            "content": Value("string"),
+            "content": Value("large_string"),
         }
     ),
     id=Value("string"),
-    extra_info=Value("string"),
+    extra_info=Value("large_string"),
 )
 
 eval_vmcq_features = Features(
