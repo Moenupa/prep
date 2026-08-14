@@ -1,9 +1,5 @@
-from ..args import DatasetPrepStream, LoadArgs
-from ..constants import first_value, get_logger
-from ..load import adaptive_load_dataset
-from ..registry import formatter
-
-logger = get_logger(__name__)
+from ..api import ProcArgs, adaptive_load_dataset, formatter
+from ..constants import first_value
 
 
 def _parse_images(e: dict) -> list:
@@ -116,6 +112,9 @@ def auto_verl(
 ):
     images = _parse_images(e)
     question, answer = _parse_qa(e, q_cols, a_cols, q_template, n_img_tags=len(images))
+    # remove \boxed{} wrapper if present, since verl expects raw answer
+    if answer.startswith("\\boxed{") and answer.endswith("}"):
+        answer = answer[len("\\boxed{") : -1]  # remove \boxed{} wrapper
 
     return {
         "images": images,
@@ -135,19 +134,19 @@ def auto_verl(
 @formatter("vqa", "sft", "train", default_src=None)
 @formatter("vqa", "sft", "val", default_src=None)
 @formatter("vqa", "sft", "test", default_src=None)
-def load_sft(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
-    d = adaptive_load_dataset(path, split=split, nproc=loadargs.num_proc)
-    loadargs.peek(d, level=10)
+def load_sft(path: str, split: str, args: ProcArgs):
+    d = adaptive_load_dataset(path, split=split, nproc=args.num_proc)
+    args.peek(d, level=10)
     d = d.map(
         auto_sft,
         fn_kwargs={
             "data_name": path.split("/")[-1],
-            "q_cols": loadargs.question_cols,
-            "a_cols": loadargs.answer_cols,
-            "q_template": loadargs.question_template,
+            "q_cols": args.question_cols,
+            "a_cols": args.answer_cols,
+            "q_template": args.question_template,
         },
         remove_columns=d.column_names,
-        num_proc=loadargs.num_proc,
+        num_proc=args.num_proc,
         with_indices=True,
     )
     return d
@@ -156,20 +155,20 @@ def load_sft(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
 @formatter("vqa", "verl", "train", default_src=None)
 @formatter("vqa", "verl", "val", default_src=None)
 @formatter("vqa", "verl", "test", default_src=None)
-def load_verl(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
-    d = adaptive_load_dataset(path, split=split, nproc=loadargs.num_proc)
-    loadargs.peek(d, level=10)
+def load_verl(path: str, split: str, args: ProcArgs):
+    d = adaptive_load_dataset(path, split=split, nproc=args.num_proc)
+    args.peek(d, level=10)
     d = d.map(
         auto_verl,
         fn_kwargs={
             "data_name": path.split("/")[-1],
             "split": split,
-            "q_cols": loadargs.question_cols,
-            "a_cols": loadargs.answer_cols,
-            "q_template": loadargs.question_template,
+            "q_cols": args.question_cols,
+            "a_cols": args.answer_cols,
+            "q_template": args.question_template,
         },
         remove_columns=d.column_names,
-        num_proc=loadargs.num_proc,
+        num_proc=args.num_proc,
         with_indices=True,
     )
     return d

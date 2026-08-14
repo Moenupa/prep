@@ -2,9 +2,9 @@ from pathlib import Path
 
 import typer
 
-from .args import LoadArgs, RuntimeArgs, _DataFormat, _Split
+from .api import FormatterPipeline, OutputActions, PathIO, ProcArgs
+from .api.types import _DataFormat, _Split
 from .constants import DEFAULT_ACOLS, DEFAULT_QCOLS
-from .registry import FormatterArgs, status_table
 
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
@@ -16,13 +16,13 @@ app = typer.Typer()
 def prep(
     target_format: _DataFormat = typer.Argument(..., help="Target format."),
     pipeline_id: str = typer.Argument(..., help="Formatter Pipeline ID."),
-    split: _Split = typer.Argument(..., help="Dataset split to convert."),
+    split: _Split = typer.Argument("train", help="Split to convert."),
     *,
     src: str | None = typer.Option(None, envvar="SRC", help="Source, HF/local path."),
     show: int = typer.Option(3, envvar="SHOW", help="Preview first n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
     save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
-    save_dir: Path = typer.Option(
+    save_root: Path = typer.Option(
         Path("out"), envvar="SAVE_DIR", rich_help_panel=_SAVE
     ),
     save_parq: bool = typer.Option(False, envvar="SAVE_PARQ", rich_help_panel=_SAVE),
@@ -44,24 +44,14 @@ def prep(
         default=DEFAULT_ACOLS, envvar="A_COLS", rich_help_panel=_AUTO
     ),
 ):
-    pipeline = FormatterArgs(
+    pipeline = FormatterPipeline.get(
         id_=pipeline_id,
         target_format=target_format,
         split=split,
-    ).pipeline
-    runtime = RuntimeArgs(
-        override_src=src,
-        save=save,
-        save_dir=save_dir,
-        save_parquet=save_parq,
-        hf=hf,
-        hf_repo=hf_repo or pipeline_id,
-        hf_subset=hf_subset,
-        hf_private=hf_private,
     )
     d = pipeline.load(
-        runtime.override_src,
-        LoadArgs(
+        src,
+        ProcArgs(
             num_proc=nproc,
             question_cols=q_cols,
             question_template=q_template,
@@ -69,23 +59,32 @@ def prep(
             show_first_n=show,
         ),
     )
-    runtime.do_save(
-        d,
-        save_path=pipeline.save_path(runtime.save_dir, runtime.save_parquet),
-        nproc=save_nproc,
+    action = OutputActions(
+        save=save,
+        save_root=save_root.expanduser(),
+        save_parquet=save_parq,
+        hf=hf,
+        hf_repo=hf_repo or pipeline_id,
+        hf_subset=hf_subset,
+        hf_private=hf_private,
     )
-    runtime.do_upload(d, split=pipeline.split, nproc=hf_nproc)
+    action.do_save(d, pipeline=pipeline, nproc=save_nproc, id_override=pipeline_id)
+    action.do_upload(d, split=pipeline.split, nproc=hf_nproc)
 
 
 @app.command()
 def ppls(
-    save_dir: Path = typer.Argument(default=Path("out"), envvar="SAVE_DIR"),
+    save_root: Path = typer.Argument(default=Path("out"), envvar="SAVE_DIR"),
+    as_json: bool = False,
 ):
     from rich.console import Console
 
     console = Console()
-    console.print(f"Showing pipelines under {save_dir.as_posix()}")
-    console.print(*status_table(save_dir))
+    console.print(f"Showing results under {save_root.as_posix()!r}")
+    if as_json:
+        console.print(*PathIO(save_root).status_dicts())
+    else:
+        console.print(*PathIO(save_root).status_tables())
 
 
 def ppls_cli():

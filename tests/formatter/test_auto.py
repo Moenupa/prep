@@ -1,16 +1,6 @@
 import pytest
 
-from prep.args import LoadArgs
 from prep.formatter import auto
-
-
-def _load_args() -> LoadArgs:
-    return LoadArgs(
-        num_proc=1,
-        question_cols=["question", "problem"],
-        question_template="Q: {question}",
-        answer_cols=["answer", "solution"],
-    )
 
 
 def test_auto_parse_images_and_qa() -> None:

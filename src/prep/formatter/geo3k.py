@@ -1,13 +1,10 @@
-from datasets import load_dataset
-
-from ..args import DatasetPrepStream, LoadArgs
-from ..registry import formatter
+from ..api import ProcArgs, adaptive_load_dataset, formatter
 
 
 @formatter("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
 @formatter("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
-def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
-    d = load_dataset(path, split=split)
+def load(path: str, split: str, args: ProcArgs):
+    d = adaptive_load_dataset(path, split=split)
     # geo3k has 3 columns: images: list[Image], problem: str, answer: str
     d = d.map(
         lambda e, idx: {
@@ -29,7 +26,7 @@ def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
             },
         },
         remove_columns=d.column_names,  # remove original columns
-        num_proc=loadargs.num_proc,  # accelerate with multiprocessing
+        num_proc=args.num_proc,  # accelerate with multiprocessing
         with_indices=True,  # add index information to the mapping function
     )
     return d
@@ -37,8 +34,8 @@ def load(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
 
 @formatter("geo3k", "sft", "train", default_src="hiyouga/geometry3k")
 @formatter("geo3k", "sft", "test", default_src="hiyouga/geometry3k")
-def load_sft(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
-    d = load_dataset(path, split=split)
+def load_sft(path: str, split: str, args: ProcArgs):
+    d = adaptive_load_dataset(path, split=split)
     d = d.map(
         lambda e, idx: {
             "images": e["images"],
@@ -53,7 +50,7 @@ def load_sft(path: str, split: str, loadargs: LoadArgs) -> DatasetPrepStream:
             "extra_info": "",
         },
         remove_columns=d.column_names,
-        num_proc=loadargs.num_proc,
+        num_proc=args.num_proc,
         with_indices=True,
     )
     return d
