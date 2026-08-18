@@ -2,9 +2,12 @@
 requires = ["uv_build>=0.12,<0.13"]
 build-backend = "uv_build"
 
+[tool.uv.build-backend]
+module-name = "prep"
+
 [project]
-name = "prep"
-version = "0.2.0"
+name = "prep-cli"
+version = "0.2.1"
 description = "Automatic and agent-friendly data preprocessing tool for LLMs and ML."
 readme = "README.md"
 authors = [
