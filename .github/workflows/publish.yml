@@ -1,4 +1,4 @@
-name: "Publish"
+name: "Build Release"
 on:
   push:
     tags:
@@ -6,11 +6,6 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -22,5 +17,3 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
       - name: Build
         run: uv build
-      - name: Publish
-        run: uv publish
