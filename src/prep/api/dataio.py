@@ -80,7 +80,7 @@ def adaptive_load_dataset(
     source: str,
     split: str | None = None,
     nproc: int | None = None,
-    subset: str | None = None,
+    max_samples: int | None = None,
 ) -> Dataset:
     path = Path(source)
 
@@ -89,6 +89,9 @@ def adaptive_load_dataset(
     if not path.exists():
         if split is None:
             raise ValueError("Split must be specified for remote datasets.")
+        subset: str | None = None
+        if "@" in source:
+            source, subset = source.split("@", 1)
         return load_dataset(
             source,
             subset,
@@ -101,7 +104,7 @@ def adaptive_load_dataset(
         d = load_local(source, split)
         # try to load from locally hf-downloaded datasets
         if d is None and split is not None:
-            d = load_dataset(source, subset, split=split, num_proc=nproc)
+            d = load_dataset(source, split=split, num_proc=nproc)
     elif path.is_file():
         if path.suffix not in _FORMATS:
             raise ValueError(f"Unsupported file format: {path.suffix!r}")
@@ -109,10 +112,11 @@ def adaptive_load_dataset(
         d = load_dataset(_FORMATS[path.suffix], data_files=[source], split="train")
 
     if d is None:
-        raise ValueError(
-            f"Failed to load dataset: source={source!r}, split={split!r}, subset={subset!r}"
-        )
+        raise ValueError(f"Failed to load dataset: source={source!r}, split={split!r}")
 
+    # not randomly shuffled
+    if max_samples is not None:
+        d = d.select(range(min(max_samples, len(d))))
     return d
 
 

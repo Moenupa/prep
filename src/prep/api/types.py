@@ -1,9 +1,16 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, get_args
 
 from datasets import Dataset, Features, Image, List, Value
 
+from ..constants import (
+    DEFAULT_ACOLS,
+    DEFAULT_ATEMP,
+    DEFAULT_OPCOLS,
+    DEFAULT_QCOLS,
+    DEFAULT_QTEMP,
+)
 from .log import get_logger
 
 _DataFormat = Literal["sft", "verl", "eval", "show"]
@@ -79,10 +86,21 @@ class ProcArgs:
     """
 
     num_proc: int
-    question_cols: list[str]
-    question_template: str
-    answer_cols: list[str]
+
+    question_cols: list[str] = field(default_factory=lambda: DEFAULT_QCOLS)
+    question_template: str = DEFAULT_QTEMP
+
+    option_cols: list[str] = field(default_factory=lambda: DEFAULT_OPCOLS)
+
+    answer_cols: list[str] = field(default_factory=lambda: DEFAULT_ACOLS)
+    answer_template: str = DEFAULT_ATEMP
+
+    # to fill in verl fields, this does not affect verl training
+    verl_ability: str = "math"
+    verl_style: str = "rule"
+
     show_first_n: int = 3
+    max_samples: int | None = None
 
     def __post_init__(self):
         if self.num_proc <= 0:

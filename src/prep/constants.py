@@ -15,6 +15,7 @@ def first_value(entry: dict, keys: list[str]) -> Any | None:
 
 
 DEFAULT_QCOLS = ["question", "Question", "problem"]
+DEFAULT_QTEMP = "{im_tags}{question}{options}"
 DEFAULT_ACOLS = [
     "answer",
     "Answer",
@@ -24,6 +25,8 @@ DEFAULT_ACOLS = [
     "correct_answer",
     "reports",
 ]
+DEFAULT_ATEMP = "{answer}"
+DEFAULT_OPCOLS = ["options", "choices"] + [f"choice_{op}" for op in "abcdefghij"]
 IMAGE_TAG = "<image>"
 
 SAVE_PREFIX = "💾\t"

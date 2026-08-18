@@ -4,7 +4,13 @@ import typer
 
 from .api import FormatterPipeline, OutputActions, PathIO, ProcArgs
 from .api.types import _DataFormat, _Split
-from .constants import DEFAULT_ACOLS, DEFAULT_QCOLS
+from .constants import (
+    DEFAULT_ACOLS,
+    DEFAULT_ATEMP,
+    DEFAULT_OPCOLS,
+    DEFAULT_QCOLS,
+    DEFAULT_QTEMP,
+)
 
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
@@ -34,14 +40,29 @@ def prep(
     hf_subset: str | None = typer.Option(None, envvar="HF_SUBSET", rich_help_panel=_HF),
     hf_private: bool = typer.Option(True, envvar="HF_PRIVATE", rich_help_panel=_HF),
     hf_nproc: int | None = typer.Option(None, envvar="HF_NPROC", rich_help_panel=_HF),
+    max_samples: int | None = typer.Option(
+        None, envvar="MAX_SAMPLES", rich_help_panel=_AUTO
+    ),
     q_cols: list[str] = typer.Option(
         default=DEFAULT_QCOLS, envvar="Q_COLS", rich_help_panel=_AUTO
     ),
     q_template: str = typer.Option(
-        default="{question}", envvar="Q_TEMP", rich_help_panel=_AUTO
+        default=DEFAULT_QTEMP, envvar="Q_TEMP", rich_help_panel=_AUTO
+    ),
+    op_cols: list[str] = typer.Option(
+        default=DEFAULT_OPCOLS, envvar="OP_COLS", rich_help_panel=_AUTO
     ),
     a_cols: list[str] = typer.Option(
         default=DEFAULT_ACOLS, envvar="A_COLS", rich_help_panel=_AUTO
+    ),
+    a_template: str = typer.Option(
+        default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
+    ),
+    verl_ability: str = typer.Option(
+        default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
+    ),
+    verl_style: str = typer.Option(
+        default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
     ),
 ):
     pipeline = FormatterPipeline.get(
@@ -55,8 +76,13 @@ def prep(
             num_proc=nproc,
             question_cols=q_cols,
             question_template=q_template,
+            option_cols=op_cols,
             answer_cols=a_cols,
+            answer_template=a_template,
+            verl_ability=verl_ability,
+            verl_style=verl_style,
             show_first_n=show,
+            max_samples=max_samples,
         ),
     )
     action = OutputActions(

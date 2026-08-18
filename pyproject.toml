@@ -5,7 +5,7 @@ build-backend = "uv_build"
 [project]
 name = "prep"
 version = "0.1.0"
-description = "The missing data preprocessing library for LLM/VLM SFT/RL."
+description = "Auto data preprocessing pipeline for Machine Learning."
 readme = "README.md"
 authors = [
     { name = "Moenupa", email = "49304833+Moenupa@users.noreply.github.com" }
@@ -23,7 +23,8 @@ ppls = "prep.cli:ppls_cli"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
+    "pytest>=9",
+    "pytest-xdist",
 ]
 
 [project.optional-dependencies]
@@ -66,4 +67,6 @@ docstring-code-format = true
 minversion = "6.0"
 addopts = "-vv --import-mode=importlib"
 filterwarnings = []
-markers = []
+markers = [
+    "slow: mark tests as slow (pytest -m 'not slow' or set RUN_SLOW=1 to run)",
+]

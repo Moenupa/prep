@@ -78,7 +78,7 @@ class FormatterPipeline:
         if k not in _FORMATTER_REGISTRY:
             print(
                 f"{WARN_PREFIX}Formatter pipeline not registered for {k}. "
-                "Fallback to the general pipeline 'vqa', which may result in expected formatting issues.",
+                "Fallback to the general pipeline 'vqa', which may result in unexpected formatting issues.",
                 file=stderr,
             )
             return _FORMATTER_REGISTRY[("vqa", target_format, split)]
