@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form when a dataset cannot be covered cleanly by the generic `vqa` pipeline and should be documented or added as a formatter.
+        Support for a new dataset, that cannot be covered cleanly by the generic `vqa` pipeline and should be added as a formatter.
 
   - type: input
     id: dataset-name
@@ -27,6 +27,8 @@ body:
         - sft
         - verl
         - eval
+    validations:
+      required: true
 
   - type: textarea
     id: loading-details
@@ -34,17 +36,13 @@ body:
       label: Loading details
       description: Describe how the source can be loaded.
       placeholder: |
-        Source location: local files / Hugging Face repo / other
-        File format: json/jsonl/parquet/csv/load_from_disk
-        Split names:
-        Image storage layout:
-        Column names for question/answer/options/images:
-        Please make sure prep cannot handle it at all (either via generic `vqa` or an existing formatter).
+        - Source & Format: file / Hugging Face repo / ...
+        - Splits: ...
 
   - type: textarea
-    id: mapping-details
+    id: schema-details
     attributes:
-      label: Mapping details
+      label: Schema details
       description: Share one or two representative records and any special handling needed.
       placeholder: |
         ```

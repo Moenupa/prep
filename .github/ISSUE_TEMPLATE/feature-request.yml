@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Use this form for CLI improvements, new conversion behavior, validation changes, save/upload flow changes, or new reusable formatting features.
+        CLI improvements, new conversion behavior, validation changes, save/upload flow changes, or new reusable formatting features.
 
   - type: dropdown
     id: area
@@ -30,6 +30,7 @@ body:
       label: Proposal
       description: |
         Describe the feature and the user-facing behavior you want.
+      placeholder: |
         Example command:
         ```
         prep sft vqa train --src my-org/my-dataset --q-cols question --a-cols answer
