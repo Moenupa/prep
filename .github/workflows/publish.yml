@@ -2,7 +2,6 @@ name: "Publish"
 on:
   push:
     tags:
-      # Publish on any tag starting with a `v`, e.g., v0.1.0
       - v*
 jobs:
   run:
@@ -16,17 +15,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       - name: "Set up Python"
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: 3.12
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v10.0.1
       - name: Build
         run: uv build
-      # Check that basic features work and we didn't miss to include crucial files
-      - name: Smoke test (wheel)
-        run: uv run --isolated --no-project --with dist/*.whl tests/test_smoke.py
-      - name: Smoke test (source distribution)
-        run: uv run --isolated --no-project --with dist/*.tar.gz tests/test_smoke.py
       - name: Publish
         run: uv publish

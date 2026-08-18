@@ -2,7 +2,7 @@ name: "CI Tests"
 on:
   push:
     tags:
-      - "v*"
+      - v*
   release:
     types:
       - published
