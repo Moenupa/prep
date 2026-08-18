@@ -2,7 +2,7 @@ from pathlib import Path
 
 import typer
 
-from .api import FormatterPipeline, OutputActions, PathIO, ProcArgs
+from .api import FormatterPipeline, OutputActions, PathIO, ProcArgs, get_valid_formats
 from .api.types import _DataFormat, _Split
 from .constants import (
     DEFAULT_ACOLS,
@@ -102,15 +102,22 @@ def prep(
 def ppls(
     save_root: Path = typer.Argument(default=Path("out"), envvar="SAVE_DIR"),
     as_json: bool = False,
+    filter_format: str = "*",
+    list_format: bool = False,
 ):
+    if list_format:
+        for f in get_valid_formats() + ["others"]:
+            typer.echo(f)
+        return
+
     from rich.console import Console
 
     console = Console()
     console.print(f"Showing results under {save_root.as_posix()!r}")
     if as_json:
-        console.print(*PathIO(save_root).status_dicts())
+        console.print(*PathIO(save_root).status_dicts(filter_format))
     else:
-        console.print(*PathIO(save_root).status_tables())
+        console.print(*PathIO(save_root).status_tables(filter_format))
 
 
 def ppls_cli():

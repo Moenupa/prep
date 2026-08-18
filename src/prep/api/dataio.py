@@ -1,5 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -124,38 +125,47 @@ def adaptive_load_dataset(
 class PathIO:
     save_root: Path
 
-    def status_dicts(self) -> "Generator[tuple[str, dict[str, list]], None, None]":
+    def per_fmt_status(
+        self,
+        target_fmt: DataFormat,
+        registered_ids: dict[tuple[DataFormat, str], str | None],
+    ) -> dict[str, list]:
+        out: dict[str, list] = defaultdict(list)
+        for (fmt, id_), default_src in sorted(registered_ids.items()):
+            if fmt != target_fmt:
+                continue
+
+            local_dir = PathIO.dataset_dir(self.save_root, fmt, id_)
+            # show unregistered as None (N.A.) instead of False (not processed)
+            local_splits = self.scan_splits(
+                local_dir
+            ) | FormatterPipeline.unregistered_splits(id_=id_, target_format=fmt)
+
+            if not local_dir.exists() or not any(local_dir.glob("*")):
+                local_dir = None
+
+            out["ID"].append(id_)
+            out["Default Source"].append(default_src or "")
+            out["Local Path"].append(str(local_dir or ""))
+            out["Size"].append(self.size(local_dir))
+            for split in get_valid_splits():
+                out[split].append(local_splits.get(split))
+        return out
+
+    def status_dicts(
+        self, filter_format: str = "*"
+    ) -> "Generator[tuple[str, dict[str, list]], None, None]":
         registered_ids = get_registered_pipelines()
         for cur_fmt in get_valid_formats():
-            out: dict[str, list] = defaultdict(list)
-            for (fmt, id_), default_src in sorted(registered_ids.items()):
-                if fmt != cur_fmt:
-                    continue
-
-                local_dir = PathIO.dataset_dir(self.save_root, fmt, id_)
-                # show unregistered as None (N.A.) instead of False (not processed)
-                local_splits = self.scan_splits(
-                    local_dir
-                ) | FormatterPipeline.unregistered_splits(id_=id_, target_format=fmt)
-
-                if not local_dir.exists() or not any(local_dir.glob("*")):
-                    local_dir = None
-
-                out["ID"].append(id_)
-                out["Default Source"].append(default_src or "")
-                out["Local Path"].append(str(local_dir or ""))
-                out["Size"].append(self.size(local_dir))
-                for split in get_valid_splits():
-                    out[split].append(local_splits.get(split))
-
-            yield cur_fmt, out
+            if fnmatch(cur_fmt, filter_format):
+                yield cur_fmt, self.per_fmt_status(cur_fmt, registered_ids)
 
         unregistered_items = {
             k: v
             for k, v in self.scan_datasets(self.save_root).items()
             if k not in registered_ids
         }
-        if not unregistered_items:
+        if not unregistered_items or fnmatch("others", filter_format) is False:
             return
 
         out: dict[str, list] = defaultdict(list)
@@ -167,10 +177,10 @@ class PathIO:
             out["Size"].append(self.size(local_dir))
             for split in get_valid_splits():
                 out[split].append(local_splits.get(split))
-        yield "Unregistered Datasets", out
+        yield "others", out
 
-    def status_tables(self) -> "Generator[Table, None, None]":
-        for title, out in self.status_dicts():
+    def status_tables(self, filter_format: str = "*") -> "Generator[Table, None, None]":
+        for title, out in self.status_dicts(filter_format=filter_format):
             table = Table(show_header=True, title=title, header_style="bold magenta")
             for colname, style in zip(
                 out.keys(),

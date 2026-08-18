@@ -45,7 +45,7 @@ def test_status_dicts_reports_registered_and_unregistered_datasets(
     assert sft_report["val"] == [False, False]
     assert sft_report["test"] == [False, False]
 
-    unregistered_report = reports["Unregistered Datasets"]
+    unregistered_report = reports["others"]
     assert unregistered_report["ID"] == ["scratch-pad"]
     assert unregistered_report["Format"] == ["verl"]
     assert unregistered_report["Local Path"] == [
