@@ -1,0 +1,52 @@
+name: "🌟 New dataset support"
+description: Request support for a new dataset or formatter pipeline
+labels: ["dataset"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when a dataset cannot be covered cleanly by the generic `vqa` pipeline and should be documented or added as a formatter.
+
+  - type: input
+    id: dataset-name
+    attributes:
+      label: Dataset name
+      description: Provide the canonical dataset name.
+      placeholder: ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: desired-formats
+    attributes:
+      label: Desired output format
+      description: Which outputs should prep support for this dataset first?
+      multiple: true
+      options:
+        - sft
+        - verl
+        - eval
+
+  - type: textarea
+    id: loading-details
+    attributes:
+      label: Loading details
+      description: Describe how the source can be loaded.
+      placeholder: |
+        Source location: local files / Hugging Face repo / other
+        File format: json/jsonl/parquet/csv/load_from_disk
+        Split names:
+        Image storage layout:
+        Column names for question/answer/options/images:
+        Please make sure prep cannot handle it at all (either via generic `vqa` or an existing formatter).
+
+  - type: textarea
+    id: mapping-details
+    attributes:
+      label: Mapping details
+      description: Share one or two representative records and any special handling needed.
+      placeholder: |
+        ```
+        ...
+        ```

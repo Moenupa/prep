@@ -1,0 +1,108 @@
+name: "🐛 Bug report"
+description: Report a reproducible problem in prep or ppls
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 🤗
+
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System Info
+      description: Please share your system info with us. You can run the command `uv pip show prep` and copy-paste its output below.
+      placeholder: datasets version, platform, python version, ...
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: information-scripts-examples
+    attributes:
+      label: Information
+      description: 'The problem arises when during:'
+      options:
+        - label: "prep CLI conversion"
+        - label: "ppls pipeline listing or output status"
+        - label: "Generic vqa pipeline"
+        - label: "Dataset-specific formatter"
+        - label: "Local file or load_from_disk source"
+        - label: "Hugging Face dataset source"
+        - label: "show mode diagnostics"
+        - label: "Save or upload"
+        - label: "Others"
+
+  - type: dropdown
+    id: target-format
+    attributes:
+      label: Target format
+      description: Which mode were you using when the bug happened?
+      options:
+        - sft
+        - verl
+        - eval
+        - show
+        - not applicable
+
+  - type: input
+    id: pipeline-id
+    attributes:
+      label: Pipeline ID
+      description: Provide the pipeline ID you used, such as `vqa`, `geo3k`, or a custom formatter ID.
+      placeholder: vqa
+
+  - type: input
+    id: split
+    attributes:
+      label: Split
+      description: Provide the split if relevant.
+      placeholder: train / val / test
+
+  - type: textarea
+    id: source-details
+    attributes:
+      label: Source details
+      description: Describe the dataset source and shape.
+      placeholder: |
+        --src value:
+        Local file, directory, or HF repo:
+        File format: json/jsonl/parquet/csv/load_from_disk/etc.
+        Relevant columns: question/answer/options/images/messages/conversations
+
+  - type: textarea
+    id: reproduction
+    validations:
+      required: true
+    attributes:
+      label: Reproduction
+      description: |
+        Provide the exact command, relevant CLI flags, and the full traceback or validation error.
+        Include a minimal sample row or schema when the issue depends on dataset content.
+        Do not use screenshots.
+
+      placeholder: |
+        Steps to reproduce the behavior:
+        ```
+        prep eval vqa val --src path/to/data.jsonl --q-cols question --a-cols answer
+        ```
+
+        Error output:
+        ...
+
+        Sample record or schema:
+        ...
+
+
+  - type: textarea
+    id: expected-behavior
+    validations:
+      required: true
+    attributes:
+      label: Expected behavior
+      description: Describe what prep should have done instead.
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Include anything else that may help, such as whether the issue reproduces with `prep show`, whether `--save-parq` changes behavior, or whether the dataset contains missing images.

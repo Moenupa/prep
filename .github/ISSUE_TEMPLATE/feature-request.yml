@@ -1,0 +1,46 @@
+name: "🚀 Feature request"
+description: Propose an improvement to prep, ppls, or the conversion APIs
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for CLI improvements, new conversion behavior, validation changes, save/upload flow changes, or new reusable formatting features.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the project does this request target?
+      options:
+        - prep CLI
+        - ppls CLI
+        - Generic vqa pipeline
+        - Dataset-specific formatter support
+        - Validation or diagnostics
+        - Output schema or save flow
+        - Documentation or examples
+        - Others
+
+  - type: textarea
+    id: feature-request
+    validations:
+      required: true
+    attributes:
+      label: Proposal
+      description: |
+        Describe the feature and the user-facing behavior you want.
+        Example command:
+        ```
+        prep sft vqa train --src my-org/my-dataset --q-cols question --a-cols answer
+        ```
+
+        Proposed new flag or behavior:
+        ...
+
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Contribution
+      description: |
+        Note whether you plan to work on this change or can provide a sample dataset, schema, or prototype.

@@ -1,4 +1,4 @@
-.PHONY: help format-check format lint test examples
+.PHONY: help format-check format lint test test-slow examples
 
 check_dirs := src tests
 
