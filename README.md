@@ -1,6 +1,10 @@
-## prep
+# prep
 
-`prep` is an agent-friendly CLI for converting vision-language datasets into common standard training and evaluation schemas backed by Hugging Face `datasets`.
+![PyPI Version](https://img.shields.io/pypi/v/prep-cli)
+![Release](https://img.shields.io/github/v/release/Moenupa/prep)
+![LICENSE](https://img.shields.io/github/license/Moenupa/prep)
+
+`prep` is an agent-friendly CLI for converting LLM/ML datasets into common standard training and evaluation schemas backed by Hugging Face `datasets`.
 
 It currently supports four CLI target modes:
 
@@ -11,22 +15,19 @@ It currently supports four CLI target modes:
 
 ## Installation
 
-With `uv`:
+```sh
+uv tool install prep-cli
+# or use pip
+pip install prep-cli
+```
+
+<details><summary>Install from source:</summary>
 
 ```sh
 uv sync --dev
+pip install -e .
 ```
-
-With `pip`:
-
-```sh
-python -m pip install -e .
-```
-
-The package installs two entry points:
-
-- `prep`
-- `ppls`
+</details>
 
 ## CLI
 

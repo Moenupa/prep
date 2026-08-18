@@ -4,8 +4,8 @@ build-backend = "uv_build"
 
 [project]
 name = "prep"
-version = "0.1.0"
-description = "Auto data preprocessing pipeline for Machine Learning."
+version = "0.2.0"
+description = "Automatic and agent-friendly data preprocessing tool for LLMs and ML."
 readme = "README.md"
 authors = [
     { name = "Moenupa", email = "49304833+Moenupa@users.noreply.github.com" }
@@ -16,6 +16,11 @@ dependencies = [
     "typer",
     "openai",
 ]
+
+[project.urls]
+source = "https://github.com/Moenupa/prep"
+issues = "https://github.com/Moenupa/prep/issues"
+releasenotes = "https://github.com/Moenupa/prep/releases"
 
 [project.scripts]
 prep = "prep.cli:prep_cli"
