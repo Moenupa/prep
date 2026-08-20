@@ -1,4 +1,5 @@
 import os
+import re
 from typing import Any
 
 
@@ -28,9 +29,11 @@ DEFAULT_ACOLS = [
 DEFAULT_ATEMP = "{answer}"
 DEFAULT_OPCOLS = ["options", "choices"] + [f"choice_{op}" for op in "abcdefghij"]
 IMAGE_TAG = "<image>"
+FORMATTING_PATTERN = re.compile(r"ANSWER:|<answer>|</answer>|\\boxed\{")
 
 SAVE_PREFIX = "💾\t"
 HF_PREFIX = "☁️\t"
 SKIP = "SKIP"
 
 WARN_PREFIX = "⚠️\t"
+ERROR_PREFIX = "⛔\t"

@@ -4,7 +4,7 @@ from sys import stderr
 
 from datasets import Dataset
 
-from ..constants import IMAGE_TAG, WARN_PREFIX
+from ..constants import ERROR_PREFIX, IMAGE_TAG, WARN_PREFIX
 from .log import get_logger
 from .types import (
     EVAL_FEAT,
@@ -15,7 +15,12 @@ from .types import (
     Split,
     get_valid_splits,
 )
-from .validate import count_img_tags, validate_image_tags, validate_openai_format
+from .validate import (
+    count_img_tags,
+    validate_answer_formatting,
+    validate_image_tags,
+    validate_openai_format,
+)
 
 logger = get_logger(__name__)
 type LoadFn = Callable[[str, Split, ProcArgs], "Dataset"]
@@ -99,6 +104,7 @@ class FormatterPipeline:
             case "verl":
                 validate_openai_format(sample["prompt"])
                 validate_image_tags(sample["prompt"], expected_n_img=n_img)
+                validate_answer_formatting(sample["prompt"])
             case "sft":
                 validate_openai_format(sample["messages"])
                 validate_image_tags(sample["messages"], expected_n_img=n_img)
@@ -124,13 +130,21 @@ class FormatterPipeline:
                     d = d.cast(SFT_FEAT)
                 case "eval":
                     d = d.cast(EVAL_FEAT)
+        except Warning as e:
+            logger.warning(f"{WARN_PREFIX}Casting warning {str(self)}")
+            logger.warning(f"{WARN_PREFIX}{e}")
         except Exception as e:
-            logger.error(f"⚠️\tCasting failed {str(self)}\n⚠️\t{e}")
+            logger.error(f"{ERROR_PREFIX}Casting failed {str(self)}")
+            logger.error(f"{ERROR_PREFIX}{e}")
         try:
             for i in range(10):
                 self.check_sample(d[i])
+        except Warning as e:
+            logger.warning(f"{WARN_PREFIX}Validation warning {str(self)}")
+            logger.warning(f"{WARN_PREFIX}{e}")
         except Exception as e:
-            logger.error(f"⚠️\tValidation failed {str(self)}\n⚠️\t{e}")
+            logger.error(f"{ERROR_PREFIX}Validation failed {str(self)}")
+            logger.error(f"{ERROR_PREFIX}{e}")
 
         args.peek(d)
         return d

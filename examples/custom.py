@@ -1,21 +1,8 @@
-from prep.args import DatasetPrepStream, LoadArgs
-from prep.formatter.auto import load_sft
-from prep.registry import formatter
+from prep.api import ProcArgs, formatter
 
 
-@formatter("ROCO-radiology", "sft", "train", default_src="eltorio/ROCO-radiology")
-@formatter(
-    "ROCOv2-radiology", "sft", "train", default_src="eltorio/ROCOv2-radiology"
-)
-@formatter(
-    "MedPix-2.0", "sft", "train", default_src="architojha/medpix-2.0-dataset"
-)
-@formatter("MIMIC-CXR", "sft", "train", default_src="MLforHealthcare/mimic-cxr")
-@formatter(
-    "pixmo-cap-qa", "sft", "train", default_src="anthracite-org/pixmo-cap-qa-images"
-)
-def load(path: str, split: str, loadargs: LoadArgs) -> "DatasetPrepStream":
-    return load_sft(path, split, loadargs)  # ty: ignore[invalid-argument-type]
+@formatter("your_dataset", "sft", "train", default_src="your/source")
+def load(path: str, split: str, loadargs: ProcArgs): ...
 
 
 if __name__ == "__main__":
@@ -26,4 +13,7 @@ if __name__ == "__main__":
 
     from prep.cli import app
 
+    # forwards arguments to the `prep` and `ppls` CLI
+    # we want to keep this in one process
+    # otherwise the registration will be lost
     get_command(app).main(args=sys.argv[1:], standalone_mode=False)

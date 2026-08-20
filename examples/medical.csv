@@ -1,0 +1,4 @@
+sft,ROCO-radiology,train,eltorio/ROCO-radiology
+sft,ROCOv2-radiology,train,eltorio/ROCOv2-radiology
+sft,MedPix-2.0,train,architojha/medpix-2.0-dataset
+sft,MIMIC-CXR,train,MLforHealthcare/mimic-cxr

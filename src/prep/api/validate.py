@@ -1,7 +1,10 @@
+from collections.abc import Generator
+
 from openai._models import validate_type
 from openai.types.chat import ChatCompletionMessageParam
 
-from ..constants import IMAGE_TAG
+from ..constants import FORMATTING_PATTERN, IMAGE_TAG
+from .log import get_logger
 
 __all__ = [
     "count_img_tags",
@@ -9,11 +12,30 @@ __all__ = [
     "validate_openai_format",
 ]
 
+logger = get_logger(__name__)
+
 
 def validate_openai_format(
     messages: list[dict] | list[ChatCompletionMessageParam],
 ) -> None:
     validate_type(type_=list[ChatCompletionMessageParam], value=messages)
+
+
+def iter_user_content(
+    messages: list[dict] | list[ChatCompletionMessageParam],
+) -> Generator[str, None, None]:
+    for msg in messages:
+        if msg.get("role") != "user":
+            continue
+
+        content = msg.get("content")
+        if isinstance(content, str):
+            yield content
+        elif isinstance(content, list):
+            for part in content:
+                if not (isinstance(part, dict) and isinstance(part.get("text"), str)):
+                    continue
+                yield part.get("text", "")
 
 
 def validate_image_tags(
@@ -25,18 +47,8 @@ def validate_image_tags(
         return
 
     n_img_tag = 0
-    for msg in messages:
-        if msg.get("role") not in ["user"]:
-            continue
-
-        content = msg.get("content")
-        if isinstance(content, str):
-            n_img_tag += count_img_tags(content)
-        elif isinstance(content, list):
-            for part in content:
-                if not (isinstance(part, dict) and isinstance(part.get("text"), str)):
-                    continue
-                n_img_tag += count_img_tags(part.get("text", ""))
+    for each_user_content in iter_user_content(messages):
+        n_img_tag += count_img_tags(each_user_content)
 
     if expected_n_img is not None and n_img_tag != expected_n_img:
         raise ValueError(
@@ -44,6 +56,19 @@ def validate_image_tags(
         )
 
     return
+
+
+def validate_answer_formatting(
+    messages: list[dict] | list[ChatCompletionMessageParam],
+) -> None:
+    # if any user msg contains formatting hints, we consider it valid
+    for each_user_content in iter_user_content(messages):
+        if FORMATTING_PATTERN.search(each_user_content):
+            return
+
+    raise SyntaxWarning(
+        f"No formatting hints. Is this expected? (detected by regex {FORMATTING_PATTERN.pattern!r})"
+    )
 
 
 def count_img_tags(text: str) -> int:
