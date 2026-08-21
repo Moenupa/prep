@@ -19,12 +19,10 @@ from rich.table import Table
 from ..constants import HF_PREFIX, SAVE_PREFIX, SKIP
 from .formatter import FormatterPipeline, get_registered_pipelines
 from .log import get_logger
-from .types import DataFormat, Split, get_valid_formats, get_valid_splits
+from .types import DataFormat, ProcArgs, Split, get_valid_formats, get_valid_splits
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-
-    from datasets import Dataset
 
 logger = get_logger(__name__)
 
@@ -80,12 +78,13 @@ def load_local(source: str, split: str | None = None) -> Dataset | None:
 def adaptive_load_dataset(
     source: str,
     split: str | None = None,
-    nproc: int | None = None,
-    max_samples: int | None = None,
+    args: ProcArgs | None = None,
 ) -> Dataset:
     path = Path(source)
 
     d = None
+    nproc = None if args is None else args.num_proc
+
     # non-local -> HF remote
     if not path.exists():
         if split is None:
@@ -116,8 +115,8 @@ def adaptive_load_dataset(
         raise ValueError(f"Failed to load dataset: source={source!r}, split={split!r}")
 
     # not randomly shuffled
-    if max_samples is not None:
-        d = d.select(range(min(max_samples, len(d))))
+    if args is not None and args.max_samples is not None:
+        d = d.select(range(min(args.max_samples, len(d))))
     return d
 
 
@@ -299,8 +298,10 @@ class OutputActions(PathIO):
             act = "Overwrite" if PathIO.is_overwrite(save_path) else "Save"
             new_path = typer.prompt(
                 f"{SAVE_PREFIX}{act}? ({SKIP!r} to skip"
-                ", ⏎ to confirm, or 'PATH' to change)",
+                ", <enter> to confirm, or enter another path to change)",
                 default=str(save_path),
+                value_proc=save_target,
+                err=True,
             )
             if new_path is None:
                 return None
@@ -399,7 +400,7 @@ class OutputActions(PathIO):
             )
             new_target = typer.prompt(
                 f"{HF_PREFIX}HF {act} ({SKIP!r} to skip"
-                ", ⏎ to confirm, or 'REPO SUBSET SPLIT' to change)",
+                ", <enter> to confirm, or modify in format 'REPO SUBSET SPLIT')",
                 default=target,
                 value_proc=hf_target,
                 err=True,

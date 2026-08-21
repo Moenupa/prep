@@ -4,15 +4,12 @@ from openai._models import validate_type
 from openai.types.chat import ChatCompletionMessageParam
 
 from ..constants import FORMATTING_PATTERN, IMAGE_TAG
-from .log import get_logger
 
 __all__ = [
     "count_img_tags",
     "validate_image_tags",
     "validate_openai_format",
 ]
-
-logger = get_logger(__name__)
 
 
 def validate_openai_format(

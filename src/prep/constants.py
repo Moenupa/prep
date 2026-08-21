@@ -30,6 +30,7 @@ DEFAULT_ATEMP = "{answer}"
 DEFAULT_OPCOLS = ["options", "choices"] + [f"choice_{op}" for op in "abcdefghij"]
 IMAGE_TAG = "<image>"
 FORMATTING_PATTERN = re.compile(r"ANSWER:|<answer>|</answer>|\\boxed\{")
+ID_PATTERN = re.compile(r"^[a-zA-Z0-9\._-]+$")
 
 SAVE_PREFIX = "💾\t"
 HF_PREFIX = "☁️\t"

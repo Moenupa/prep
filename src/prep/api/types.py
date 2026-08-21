@@ -122,3 +122,7 @@ class ProcArgs:
 
         for i in range(min(self.show_first_n, len(d))):
             logger.log(level, d[i])
+
+
+class RegistrationError(Exception):
+    """Formatter pipeline registration error."""

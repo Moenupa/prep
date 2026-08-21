@@ -4,7 +4,7 @@ from sys import stderr
 
 from datasets import Dataset
 
-from ..constants import ERROR_PREFIX, IMAGE_TAG, WARN_PREFIX
+from ..constants import ERROR_PREFIX, ID_PATTERN, IMAGE_TAG, WARN_PREFIX
 from .log import get_logger
 from .types import (
     EVAL_FEAT,
@@ -12,6 +12,7 @@ from .types import (
     VERL_FEAT,
     DataFormat,
     ProcArgs,
+    RegistrationError,
     Split,
     get_valid_splits,
 )
@@ -35,10 +36,19 @@ def formatter(
     default_src: str | None = None,
 ) -> Callable[[LoadFn], LoadFn]:
     def decorator(function: LoadFn) -> LoadFn:
-        assert "/" not in id_, "pipeline ID should not contain '/'"
-        assert (id_, target_format, split) not in _FORMATTER_REGISTRY, (
-            f"Pipeline duplicated for {(id_, target_format, split)}"
-        )
+        if not ID_PATTERN.match(id_):
+            raise RegistrationError(
+                f"Invalid pipeline ID {id_!r}. Must match {ID_PATTERN.pattern!r}"
+            )
+        if target_format == "show" and id_ != "_":
+            raise RegistrationError(
+                "No new pipelines allowed for target_format 'show'."
+            )
+
+        if (id_, target_format, split) in _FORMATTER_REGISTRY:
+            raise RegistrationError(
+                f"Pipeline duplicated for {(id_, target_format, split)}"
+            )
 
         _FORMATTER_REGISTRY[(id_, target_format, split)] = FormatterPipeline(
             id_=id_,

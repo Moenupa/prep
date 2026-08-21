@@ -5,8 +5,8 @@ import pytest
 from datasets import Dataset
 
 import prep.formatter.auto  # noqa: F401
-from prep.api.formatter import FormatterPipeline
-from prep.api.types import SFT_FEAT, ProcArgs
+from prep.api.formatter import FormatterPipeline, formatter
+from prep.api.types import SFT_FEAT, ProcArgs, RegistrationError
 
 formatter_api = importlib.import_module("prep.api.formatter")
 
@@ -20,6 +20,27 @@ def procargs() -> ProcArgs:
         answer_cols=["answer"],
         show_first_n=0,
     )
+
+
+@pytest.mark.parametrize(
+    "pipeline_id, target_format, split",
+    [
+        # duplicated registration
+        ("vqa", "sft", "train"),
+        ("vqa", "verl", "val"),
+        ("_noop", "show", "val"),
+        # invalid id
+        ("invalid/pipeline", "sft", "train"),
+        ("invalid pipeline", "verl", "test"),
+        ("invalid?id", "verl", "test"),
+        ("invalid@id", "verl", "test"),
+    ],
+)
+def test_formatter_id_check(pipeline_id: str, target_format: str, split: str) -> None:
+    with pytest.raises(RegistrationError):
+
+        @formatter(pipeline_id, target_format, split)  # ty: ignore[invalid-argument-type]
+        def dummy(): ...
 
 
 def test_formatter_get_falls_back_to_vqa_for_unknown_pipeline(

@@ -33,9 +33,7 @@ def auto_sft(
 @formatter("vqa", "sft", "val", default_src=None)
 @formatter("vqa", "sft", "test", default_src=None)
 def load_sft(path: str, split: str, args: ProcArgs):
-    d = adaptive_load_dataset(
-        path, split=split, nproc=args.num_proc, max_samples=args.max_samples
-    )
+    d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)
     d = d.map(
         auto_sft,
@@ -96,9 +94,7 @@ def auto_verl(
 @formatter("vqa", "verl", "val", default_src=None)
 @formatter("vqa", "verl", "test", default_src=None)
 def load_verl(path: str, split: str, args: ProcArgs):
-    d = adaptive_load_dataset(
-        path, split=split, nproc=args.num_proc, max_samples=args.max_samples
-    )
+    d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)
     d = d.map(
         auto_verl,
@@ -135,13 +131,18 @@ def auto_eval(
     images = extract_images(e)
     options = extract_options(e, option_cols)
 
-    # if there are options, remove it from the context
-    # options should be provided seperately in `options` field
-    if "{options}" in q_template and options:
-        q_template = q_template.replace("{options}", "")
+    # options should be provided separately in the `options` field,
+    # not embedded in the question text
+    eval_q_template = q_template.replace("{options}", "") if options else q_template
 
     question, answer = extract_qa(
-        e, q_cols, a_cols, option_cols, q_template, a_template, n_img_tags=len(images)
+        e,
+        q_cols,
+        a_cols,
+        option_cols,
+        eval_q_template,
+        a_template,
+        n_img_tags=len(images),
     )
     # remove \boxed{} wrapper if present, since verl expects raw answer
     if answer.startswith("\\boxed{") and answer.endswith("}"):
@@ -161,9 +162,7 @@ def auto_eval(
 @formatter("vqa", "eval", "val", default_src=None)
 @formatter("vqa", "eval", "test", default_src=None)
 def load_eval(path: str, split: str, args: ProcArgs):
-    d = adaptive_load_dataset(
-        path, split=split, nproc=args.num_proc, max_samples=args.max_samples
-    )
+    d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)
     d = d.map(
         auto_eval,

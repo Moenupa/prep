@@ -1,8 +1,10 @@
 import warnings
 from functools import partial
 
-from ..api import ProcArgs, adaptive_load_dataset, formatter
+from ..api import ProcArgs, adaptive_load_dataset, formatter, get_logger
 from ..constants import is_env_enabled
+
+logger = get_logger(__name__)
 
 SLOW_PASS = is_env_enabled("SLOW_PASS", default="0")
 
@@ -16,17 +18,17 @@ def print_if_warn_or_error(start_from: int, *, d, chunksize: int) -> None:
             try:
                 _ = d[idx]
             except Exception as ex:
-                print(f"Error at {idx}: {ex}")
+                logger.error("Error at %d: %s", idx, ex)
 
             for w in recorded_warnings:
-                print(f"Warning at {idx}: {w.message}")
+                logger.warning("Warning at %d: %s", idx, w.message)
 
 
 @formatter("_", "show", "train", default_src=None)
 @formatter("_", "show", "val", default_src=None)
 @formatter("_", "show", "test", default_src=None)
 def load(path: str, split: str, args: ProcArgs):
-    d = adaptive_load_dataset(path, split=split, nproc=args.num_proc)
+    d = adaptive_load_dataset(path, split=split, args=args)
     if SLOW_PASS:
         # if you ever run into errors during the filtering and need to id the example
         # turn on SLOW_PASS and it will iterate and print buggy examples

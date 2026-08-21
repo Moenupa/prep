@@ -97,7 +97,9 @@ def get_options_from_single_entry(e: dict, option_cols: list[str]) -> list[str] 
             # return values sorted by key to ensure consistent order
             # e.g. {"A": "text A", "B": "text B", ...} -> ["text A", "text B", ...]
             # or {"b": "text B", "a": "text A", ...} -> ["text A", "text B", ...]
-            return [v for _, v in sorted(options.items())]
+            return [
+                v for _, v in sorted(options.items(), key=lambda kv: kv[0].casefold())
+            ]
 
     return None
 

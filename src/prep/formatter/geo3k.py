@@ -4,7 +4,7 @@ from ..api import ProcArgs, adaptive_load_dataset, formatter
 @formatter("geo3k", "verl", "train", default_src="hiyouga/geometry3k")
 @formatter("geo3k", "verl", "test", default_src="hiyouga/geometry3k")
 def load(path: str, split: str, args: ProcArgs):
-    d = adaptive_load_dataset(path, split=split)
+    d = adaptive_load_dataset(path, split=split, args=args)
     # geo3k has 3 columns: images: list[Image], problem: str, answer: str
     d = d.map(
         lambda e, idx: {
