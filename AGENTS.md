@@ -7,12 +7,11 @@ This file provides agents with information about the project.
 Use `make`, `uv`, and `uvx` commands to run code formatting, linting, and tests.
 
 ```sh
-make format-check  # Check code formatting (no fix)
-make format        # Format code
-make lint          # Run lint checks
-make test          # Run tests
-make test-slow     # Run tests marked slow
-make examples      # Run examples
+make format-check  # Check code lint/format (no fix)
+make format        # Run linter and formatter
+make check         # Run type checker
+make test          # Run quick tests
+make test-slow     # Run tests with real examples (slow)
 
 # Run a single test file
 uv run pytest tests/path/to/test_file.py
@@ -51,5 +50,5 @@ uv run pytest tests/path/to/test_file.py
 ## Code Style
 
 - `make format` or `ruff` for formatting with Google-style docstrings
-- `make lint` or `ty` for static analysis
+- `make check` or `ty` for static analysis
 - Python 3.12+ syntax

@@ -33,7 +33,7 @@ body:
       placeholder: |
         Example command:
         ```
-        prep sft vqa train --src my-org/my-dataset --q-cols question --a-cols answer
+        prep sft vqa train my-org/my-dataset --q-cols question --a-cols answer
         ```
 
         Proposed new flag or behavior:

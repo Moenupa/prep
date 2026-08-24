@@ -34,7 +34,7 @@ pip install -e .
 Convert a dataset:
 
 ```sh
-prep TARGET_FORMAT PIPELINE_ID [SPLIT] [OPTIONS]
+prep TARGET_FORMAT PIPELINE_ID [SPLIT] [OVERRIDESRC] [OPTIONS]
 ```
 
 Examples:
@@ -42,14 +42,14 @@ Examples:
 ```sh
 # `vqa` is the generic path for datasets that already resemble common VQA formats.
 # It accepts a local path or a Hugging Face dataset source and maps fields using configurable column lists and templates.
-prep sft vqa train --src path/to/data.jsonl --save
-prep eval vqa val --src my-org/my-dataset --q-cols question problem --a-cols answer label
+prep sft vqa train path/to/data.jsonl --save
+prep eval vqa val my-org/my-dataset --q-cols question problem --a-cols answer label
 
 # or you may use a dataset-specific formatter pipeline if one is registered:
 prep verl geo3k test --save
 
 # show a dataset, to diagnose lazy image decoding or other issues:
-prep show - train --src path/to/local_dataset --no-save --no-hf
+prep show - train path/to/local_dataset --no-save --no-hf
 ```
 
 List registered pipelines and local output status:

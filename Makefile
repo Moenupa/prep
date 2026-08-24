@@ -4,17 +4,20 @@ check_dirs := src tests
 
 # uvx with fallback, e.g.: 1. `uvx ruff check` 2. `ruff check`
 TOOL := $(shell command -v uv >/dev/null 2>&1 && echo "uvx" || echo "")
-RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run" || echo "")
+RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run --env-file .env" || echo "")
 
-all: format lint
+.env:
+	@cp .env.example .env
+
+all: format check
 
 help:
 	@echo "Available targets:"
-	@echo "  format-check:  Check code formatting (no fix)"
-	@echo "  format:        Format code"
-	@echo "  lint:          Run lint checks"
-	@echo "  test:          Run tests"
-	@echo "  examples:      Run examples"
+	@echo "  format-check:  Check code lint/format (no fix)"
+	@echo "  format:        Run linter and formatter"
+	@echo "  check:         Run type checker"
+	@echo "  test:          Run quick tests"
+	@echo "  test-slow:     Run tests with real examples (slow)"
 
 format-check:
 	$(TOOL) ruff check $(check_dirs)
@@ -24,14 +27,11 @@ format:
 	$(TOOL) ruff check $(check_dirs) --fix
 	$(TOOL) ruff format $(check_dirs)
 
-lint:
+check:
 	$(TOOL) ty check $(check_dirs)
 
-test:
+test: .env
 	$(RUN) pytest tests -n 8
 
-test-slow:
+test-slow: .env
 	RUN_SLOW=1 $(RUN) pytest tests -n 8 -rA
-
-examples:
-	$(MAKE) -C examples

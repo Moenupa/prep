@@ -129,7 +129,7 @@ class FormatterPipeline:
         if path is None:
             raise ValueError(
                 f"Dataset {self.id_!r} has no local/remote source to load from."
-                " Pass --src to override or register a default source in loading function."
+                " Pass a source (e.g. `SRC=`) to override or register a default source."
             )
         d = self.load_fn(path, self.split, args)
         try:
