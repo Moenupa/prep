@@ -64,7 +64,6 @@ body:
       label: Source details
       description: Describe the dataset source and shape.
       placeholder: |
-        --src value:
         Local file, directory, or HF repo:
         File format: json/jsonl/parquet/csv/load_from_disk/etc.
         Relevant columns: question/answer/options/images/messages/conversations
@@ -83,7 +82,7 @@ body:
       placeholder: |
         Steps to reproduce the behavior:
         ```
-        prep eval vqa val --src path/to/data.jsonl --q-cols question --a-cols answer
+        prep eval vqa val path/to/data.jsonl --q-cols question --a-cols answer
         ```
 
         Error output:

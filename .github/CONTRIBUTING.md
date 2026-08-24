@@ -54,7 +54,7 @@ Prep follows the [Google Python Style Guide][google-python-styleguide] and
 5. Check code before commit:
     ```bash
     make format && make format-check
-    make lint
+    make check
     make test
     ```
 

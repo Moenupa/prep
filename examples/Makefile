@@ -1,77 +1,57 @@
-RUN := $(shell command -v uv >/dev/null 2>&1 && echo "uv run" || echo "")
-
+RUN ?= $(shell command -v uv >/dev/null 2>&1 && echo "uv run --env-file .env" || echo "")
 SAVE_DIR ?= out
+SEP ?= ,
+
+.env:
+	@echo "" > .env
+
 CSV_FILES := $(wildcard *.csv)
+CSV_BASES := $(basename $(CSV_FILES))
+nth = $(word $(1),$(subst $(SEP), ,$(2)))
 
-# Parse each CSV as four non-empty comma-separated fields.
-# Target components must contain only letters, numbers, ".", "_", "-", and "/".
-ifneq ($(strip $(CSV_FILES)),)
-CSV_ROWS_RAW := $(shell \
-	awk -F, '\
-		function fail(message) { \
-			printf "%s:%d: %s\n", FILENAME, FNR, message > "/dev/stderr"; \
-			bad = 1 \
-		} \
-		{ \
-			sub(/\r$$/, "", $$4); \
-			if (NF != 4) { \
-				fail("expected exactly 4 columns"); \
-				next \
-			} \
-			for (i = 1; i <= 4; i++) \
-				if ($$i == "" || $$i ~ /[[:space:]|]/ || \
-					index($$i, sprintf("%c", 39)) || index($$i, "$$")) { \
-					fail("empty or unsupported field"); \
-					next \
-				} \
-			if ($$1 !~ /^[[:alnum:]_.\/-]+$$/ || \
-				$$2 !~ /^[[:alnum:]_.\/-]+$$/ || \
-				$$3 !~ /^[[:alnum:]_.\/-]+$$/) { \
-				fail("invalid character in target component"); \
-				next \
-			} \
-			printf "%s|%s|%s|%s\n", $$1, $$2, $$3, $$4 \
-		} \
-		END { if (bad) exit 1 }' $(CSV_FILES) || \
-	echo __CSV_PARSE_ERROR__)
-else
-CSV_ROWS_RAW :=
-endif
+# rows in format,name,split,src
+rows_from = $(shell awk -F, '{ sub(/\r$$/, "", $$4); print $$1","$$2","$$3","$$4 }' $(1) 2>/dev/null)
 
-ifneq ($(filter __CSV_PARSE_ERROR__,$(CSV_ROWS_RAW)),)
-$(error Could not parse CSV input)
-endif
+# artifact derivation rule, actual files/directories relative to the SAVE_DIR
+# 1/ collective targets, phony name of csv files (without extension)
+# Usage: make math       # builds parquet targets from math.csv
+#        make math-dirs  # builds directory targets from math.csv
+# 2/ individual targets, output path of artifacts specified in the csv file
+# Usage: make out/verl/aime24/test.parquet
+#        make out/verl/aime24/test/
+define PARQ_RULE
+$(SAVE_DIR)/$(call nth,1,$(1))/$(call nth,2,$(1))/$(call nth,3,$(1)).parquet: .env
+	$(RUN) prep $(call nth,1,$(1)) $(call nth,2,$(1)) $(call nth,3,$(1)) $(call nth,4,$(1)) --save --save-parq --no-hf
+endef
+define DIR_RULE
+$(SAVE_DIR)/$(call nth,1,$(1))/$(call nth,2,$(1))/$(call nth,3,$(1))/: .env
+	$(RUN) prep $(call nth,1,$(1)) $(call nth,2,$(1)) $(call nth,3,$(1)) $(call nth,4,$(1)) --save --no-save-parq --no-hf
+endef
+$(foreach csv,$(CSV_FILES),\
+	$(eval _ROWS := $(call rows_from,$(csv))) \
+	$(foreach row,$(_ROWS),$(eval $(call PARQ_RULE,$(row)))) \
+	$(foreach row,$(_ROWS),$(eval $(call DIR_RULE,$(row)))) \
+	$(eval _BASE := $(basename $(csv))) \
+	$(eval .PHONY: $(_BASE) $(_BASE)-dirs) \
+	$(eval $(_BASE): $(foreach row,$(_ROWS),$(SAVE_DIR)/$(call nth,1,$(row))/$(call nth,2,$(row))/$(call nth,3,$(row)).parquet)) \
+	$(eval $(_BASE)-dirs: $(foreach row,$(_ROWS),$(SAVE_DIR)/$(call nth,1,$(row))/$(call nth,2,$(row))/$(call nth,3,$(row))/)) \
+)
 
-CSV_ROWS := $(CSV_ROWS_RAW)
-csv_field = $(word $(1),$(subst |, ,$(2)))
+.PHONY: parq dir help
 
-REAL_TARGETS := $(foreach row,$(CSV_ROWS),\
-	$(SAVE_DIR)/$(call csv_field,1,$(row))/$(call csv_field,2,$(row))/$(call csv_field,3,$(row)).parquet)
+parq: $(CSV_BASES)
+	$(RUN) ppls
 
-ifneq ($(words $(REAL_TARGETS)),$(words $(sort $(REAL_TARGETS))))
-$(error Multiple CSV rows produce the same target)
-endif
-
-.PHONY: all help
-
-all: $(REAL_TARGETS)
+dirs: $(CSV_BASES:%=%-dirs)
 	$(RUN) ppls
 
 help:
 	@echo "\nAvailable targets:"
-	@$(eval F1_MAX := $(shell printf '%s\n' $(foreach row,$(CSV_ROWS),$(call csv_field,1,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
-	@$(eval F2_MAX := $(shell printf '%s\n' $(foreach row,$(CSV_ROWS),$(call csv_field,2,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
-	@$(eval F3_MAX := $(shell printf '%s\n' $(foreach row,$(CSV_ROWS),$(call csv_field,3,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
-	@$(eval TGT_MAX := $(shell printf '%s\n' $(foreach row,$(CSV_ROWS),$(SAVE_DIR)/$(call csv_field,1,$(row))/$(call csv_field,2,$(row))/$(call csv_field,3,$(row)).parquet) | awk '{ len=length; if(len>max) max=len } END { print max }'))
-	@$(eval SRC_MAX := $(shell printf '%s\n' $(foreach row,$(CSV_ROWS),$(call csv_field,4,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
-	@$(foreach row,$(CSV_ROWS),\
-		printf '  %-*s  %-*s  %-*s  %-*s    %-*s\n' $(F1_MAX) '$(call csv_field,1,$(row))' $(F2_MAX) '$(call csv_field,2,$(row))' $(F3_MAX) '$(call csv_field,3,$(row))' $(TGT_MAX) '$(SAVE_DIR)/$(call csv_field,1,$(row))/$(call csv_field,2,$(row))/$(call csv_field,3,$(row)).parquet' $(SRC_MAX) '$(call csv_field,4,$(row))'; \
+	@$(eval L1 := $(shell printf '%s\n' $(foreach row,$(ROWS),$(call nth,1,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
+	@$(eval L2 := $(shell printf '%s\n' $(foreach row,$(ROWS),$(call nth,2,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
+	@$(eval L3 := $(shell printf '%s\n' $(foreach row,$(ROWS),$(call nth,3,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
+	@$(eval L4 := $(shell printf '%s\n' $(foreach row,$(ROWS),$(call nth,4,$(row))) | awk '{ len=length; if(len>max) max=len } END { print max }'))
+	@$(foreach row,$(ROWS),\
+		printf '  %-*s  %-*s  %-*s  %-*s    %-*s\n' $(L1) '$(call nth,1,$(row))' $(L2) '$(call nth,2,$(row))' $(L3) '$(call nth,3,$(row))' $(L4) '$(call nth,4,$(row))'; \
 	) :
 	@echo ""
-
-define CSV_RULE
-$(SAVE_DIR)/$(call csv_field,1,$(1))/$(call csv_field,2,$(1))/$(call csv_field,3,$(1)).parquet:
-	$(RUN) prep '$(call csv_field,1,$(1))' '$(call csv_field,2,$(1))' '$(call csv_field,3,$(1))' --src '$(call csv_field,4,$(1))' --save --save-parq --no-hf
-endef
-
-$(foreach row,$(CSV_ROWS),$(eval $(call CSV_RULE,$(row))))
