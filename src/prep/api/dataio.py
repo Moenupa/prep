@@ -330,11 +330,13 @@ class OutputActions(PathIO):
                 pass
             # if --no-save is passed, skip saving as a whole.
             case False:
+                typer.echo(f"{SAVE_PREFIX}Not saving (--no-save passed)")
                 return
             # otherwise, go into interactive mode and figure out save_path
             case None:
                 resolved_path = self._resolve_save_path(save_path)
                 if resolved_path is None:
+                    typer.echo(f"{SAVE_PREFIX}Not saving")
                     return
                 save_path = resolved_path
 
@@ -355,10 +357,10 @@ class OutputActions(PathIO):
         config_name: str,
         split: str,
     ) -> bool:
-        if not HfApi().repo_exists(repo_id, repo_type="dataset"):
-            return False
-
         try:
+            if not HfApi().repo_exists(repo_id, repo_type="dataset"):
+                return False
+
             configs = get_dataset_config_names(repo_id)
             return config_name in configs and split in get_dataset_split_names(
                 repo_id, config_name
@@ -417,7 +419,7 @@ class OutputActions(PathIO):
         d: "Dataset",
         split: Split | str,
         nproc: int | None = None,
-        dry_run: bool = True,
+        dry_run: bool = False,
     ):
         import typer
 
@@ -435,12 +437,14 @@ class OutputActions(PathIO):
                 pass
             # if --no-hf is passed, skip uploading as a whole.
             case False:
+                typer.echo(f"{HF_PREFIX}Not uploading (--no-hf passed)")
                 return
             case None:
                 target = self._resolve_hf_target(
                     repo_id=repo_id, config_name=subset, split=split
                 )
                 if target is None:
+                    typer.echo(f"{HF_PREFIX}Not uploading")
                     return
                 repo_id, subset, split = target
 
