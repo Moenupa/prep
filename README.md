@@ -7,7 +7,7 @@
 `prep` is an agent-friendly CLI for converting LLM/ML datasets into common standard training and evaluation schemas backed by Hugging Face `datasets`.
 
 It currently supports four CLI target modes:
-
+It currently supports five CLI target modes:
 - `sft`: two-turn OpenAI-style chat samples with images.
 - `verl`: VERL-compatible prompt/reward records with images.
 - `eval`: MMMU-style evaluation records with question, options, answer, and images.
