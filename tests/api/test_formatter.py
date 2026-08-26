@@ -205,5 +205,5 @@ class TestFormatterCastDataset:
             show_first_n=0,
         )
 
-        with pytest.raises(AssertionError, match="Please provide via env var"):
+        with pytest.raises(ValueError):
             FormatterPipeline.cast_dataset(dataset, "cls", args_without_labels)

@@ -11,7 +11,8 @@ def auto_cls(
     a_cols: list[str],
 ):
     images = extract_images(e)
-    assert len(images) == 1, f"Expected 1 image, got {len(images)} in example: {e}"
+    if len(images) != 1:
+        raise ValueError(f"Expected 1 image, got {len(images)} in example: {e}")
     label = extract_label(e, a_cols)
 
     return {

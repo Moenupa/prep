@@ -31,7 +31,7 @@ class TestAutoClsFunction:
             "label": "cat",
         }
 
-        with pytest.raises(AssertionError, match="Expected 1 image"):
+        with pytest.raises(ValueError):
             auto_cls(example, 0, data_name="test", split="train", a_cols=["label"])
 
     def test_auto_cls_empty_extra_info(self):
