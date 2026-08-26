@@ -1,8 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Literal, get_args
-
-from datasets import Dataset, Features, Image, List, Value
+from typing import Any, Literal, get_args
 
 from ..constants import (
     DEFAULT_ACOLS,
@@ -28,52 +26,6 @@ def get_valid_formats() -> list[DataFormat]:
     return list(filter(lambda x: x != "show", get_args(_DataFormat)))
 
 
-VERL_FEAT = Features(
-    images=List(Image(decode=True)),
-    data_source=Value("string"),
-    prompt=List(
-        {
-            "role": Value("string"),
-            "content": Value("large_string"),
-        }
-    ),
-    ability=Value("string"),
-    reward_model={
-        "style": Value("string"),
-        "ground_truth": Value("string"),
-    },
-    extra_info={
-        "split": Value("string"),
-        "index": Value("string"),
-        # feedback, CoT, or hint to guide better answers
-        "explanation": Value("large_string"),
-        # any miscellaneous info accepting json.dumps() stuff
-        # this is for compatiblity with multiple datasets, supporting any structure
-        "misc": Value("large_string"),
-    },
-)
-
-SFT_FEAT = Features(
-    images=List(Image(decode=True)),
-    messages=List(
-        {
-            "role": Value("string"),
-            "content": Value("large_string"),
-        }
-    ),
-    id=Value("string"),
-    extra_info=Value("large_string"),
-)
-
-EVAL_FEAT = Features(
-    id=Value("string"),
-    images=List(Image(decode=True)),
-    question=Value("string"),
-    options=List(Value("string")),
-    answer=Value("string"),
-)
-
-
 @dataclass(frozen=True)
 class ProcArgs:
     """A lite wrapper for arguments for formatter pipelines.
@@ -85,7 +37,7 @@ class ProcArgs:
         ValueError: If ``question_template`` is empty.
     """
 
-    num_proc: int
+    num_proc: int = 1
 
     question_cols: list[str] = field(default_factory=lambda: DEFAULT_QCOLS)
     question_template: str = DEFAULT_QTEMP
@@ -94,6 +46,7 @@ class ProcArgs:
 
     answer_cols: list[str] = field(default_factory=lambda: DEFAULT_ACOLS)
     answer_template: str = DEFAULT_ATEMP
+    labels: list[str] = field(default_factory=lambda: [])
 
     # to fill in verl fields, this does not affect verl training
     verl_ability: str = "math"
@@ -117,7 +70,7 @@ class ProcArgs:
                 "question_template does not contain '{question}' placeholder."
             )
 
-    def peek(self, d: "Dataset", level: int = logging.INFO):
+    def peek(self, d: Any, level: int = logging.INFO):
         logger.log(level, d)
 
         for i in range(min(self.show_first_n, len(d))):

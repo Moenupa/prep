@@ -10,7 +10,8 @@ It currently supports four CLI target modes:
 
 - `sft`: two-turn OpenAI-style chat samples with images.
 - `verl`: VERL-compatible prompt/reward records with images.
-- `eval`: evaluation records with question, options, answer, and images.
+- `eval`: MMMU-style evaluation records with question, options, answer, and images.
+- `cls`: image-label classification records for classification tasks.
 - `show`: diagnostic load-only mode that forces dataset decoding to surface bad samples and image warnings.
 
 ## Installation
@@ -34,16 +35,17 @@ pip install -e .
 Convert a dataset:
 
 ```sh
-prep TARGET_FORMAT PIPELINE_ID [SPLIT] [OVERRIDESRC] [OPTIONS]
+prep TARGET_FORMAT PIPELINE_ID [SPLIT] [SOURCE] [OPTIONS]
 ```
 
 Examples:
 
 ```sh
-# `vqa` is the generic path for datasets that already resemble common VQA formats.
-# It accepts a local path or a Hugging Face dataset source and maps fields using configurable column lists and templates.
-prep sft vqa train path/to/data.jsonl --save
-prep eval vqa val my-org/my-dataset --q-cols question problem --a-cols answer label
+# `auto` is a generic alias for datasets that already resemble common VQA formats.
+# it is also the fallback for datasets without a known formatter.
+# you must provide SPLIT and SOURCE (local path or Hugging Face dataset ID) for this.
+prep sft auto train path/to/data.jsonl --no-save
+prep eval myalias val my-org/my-dataset --q-cols question --q-cols problem --a-cols answer
 
 # or you may use a dataset-specific formatter pipeline if one is registered:
 prep verl geo3k test --save
@@ -73,7 +75,7 @@ If a dataset has multiple splits, a split must be provided. `val` is automatical
 
 ## Generic Conversion Controls
 
-The generic `vqa` pipelines expose these important knobs:
+The generic `auto` pipelines expose these important knobs:
 
 - `--q-cols`: candidate question columns. Defaults to `question`, `Question`, `problem`.
 - `--a-cols`: candidate answer columns. Defaults to `answer`, `Answer`, `solution`, `label`, `caption`, `correct_answer`, `reports`.
@@ -189,4 +191,4 @@ Notes:
 
 - Formatter pipeline IDs (`my-dataset`) must not contain `/`.
 - `src/prep/formatter/__init__.py` auto-imports all formatter modules under `src/prep/formatter/*.py`, so registration happens on package import.
-- If your dataset already follows common VQA conventions, prefer `vqa` with CLI overrides before adding a dataset-specific loader.
+- If your dataset already follows common VQA conventions, prefer `auto` with CLI overrides before adding a dataset-specific loader.

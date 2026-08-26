@@ -2,14 +2,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from sys import stderr
 
-from datasets import Dataset
+from datasets import ClassLabel, Dataset, Features, Image, List, Value
 
 from ..constants import ERROR_PREFIX, ID_PATTERN, IMAGE_TAG, WARN_PREFIX
 from .log import get_logger
 from .types import (
-    EVAL_FEAT,
-    SFT_FEAT,
-    VERL_FEAT,
     DataFormat,
     ProcArgs,
     RegistrationError,
@@ -93,10 +90,10 @@ class FormatterPipeline:
         if k not in _FORMATTER_REGISTRY:
             print(
                 f"{WARN_PREFIX}Formatter pipeline not registered for {k}. "
-                "Fallback to the general pipeline 'vqa', which may result in unexpected formatting issues.",
+                "Fallback to the general pipeline 'auto', which may result in unexpected formatting issues.",
                 file=stderr,
             )
-            return _FORMATTER_REGISTRY[("vqa", target_format, split)]
+            return _FORMATTER_REGISTRY[("auto", target_format, split)]
 
         return _FORMATTER_REGISTRY[(id_, target_format, split)]
 
@@ -124,6 +121,72 @@ class FormatterPipeline:
                     f"Mismatch: number of images {n_img} != {n_tags} {IMAGE_TAG} tags."
                 )
 
+    @staticmethod
+    def cast_dataset(d: Dataset, target_format: DataFormat, args: ProcArgs) -> Dataset:
+        match target_format:
+            case "verl":
+                return d.cast(
+                    Features(
+                        images=List(Image(decode=True)),
+                        data_source=Value("string"),
+                        prompt=List(
+                            {"role": Value("string"), "content": Value("large_string")}
+                        ),
+                        ability=Value("string"),
+                        reward_model={
+                            "style": Value("string"),
+                            "ground_truth": Value("string"),
+                        },
+                        extra_info={
+                            "split": Value("string"),
+                            "index": Value("string"),
+                            # feedback, CoT, or hint to guide better answers
+                            "explanation": Value("large_string"),
+                            # any miscellaneous info accepting json.dumps() stuff
+                            # this is for compatiblity with multiple datasets, supporting any structure
+                            "misc": Value("large_string"),
+                        },
+                    )
+                )
+            case "sft":
+                return d.cast(
+                    Features(
+                        images=List(Image(decode=True)),
+                        messages=List(
+                            {"role": Value("string"), "content": Value("large_string")}
+                        ),
+                        id=Value("string"),
+                        extra_info=Value("large_string"),
+                    )
+                )
+            case "eval":
+                return d.cast(
+                    Features(
+                        id=Value("string"),
+                        images=List(Image(decode=True)),
+                        question=Value("string"),
+                        options=List(Value("string")),
+                        answer=Value("string"),
+                    )
+                )
+            case "cls":
+                # for classification datasets, e.g. cifar10, imagenet, etc.
+                assert len(args.labels) > 0, (
+                    "Please provide via env var `LABELS='cls1 cls2'` or CLI option `--labels cls1 --labels cls2`."
+                )
+                return d.cast(
+                    Features(
+                        id=Value("string"),
+                        image=Image(decode=True),
+                        label=ClassLabel(names=args.labels),
+                        extra_info=Value("large_string"),
+                    )
+                )
+            case "show":
+                return d
+            case _:
+                raise ValueError(f"Unknown target_format {target_format!r}")
+
     def load(self, override_src: str | None, args: ProcArgs) -> Dataset:
         path = override_src or self.default_src
         if path is None:
@@ -133,13 +196,7 @@ class FormatterPipeline:
             )
         d = self.load_fn(path, self.split, args)
         try:
-            match self.target_format:
-                case "verl":
-                    d = d.cast(VERL_FEAT)
-                case "sft":
-                    d = d.cast(SFT_FEAT)
-                case "eval":
-                    d = d.cast(EVAL_FEAT)
+            d = self.cast_dataset(d, self.target_format, args)
         except Warning as e:
             logger.warning(f"{WARN_PREFIX}Casting warning {str(self)}")
             logger.warning(f"{WARN_PREFIX}{e}")

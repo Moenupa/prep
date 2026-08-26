@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Support for a new dataset, that cannot be covered cleanly by the generic `vqa` pipeline and should be added as a formatter.
+        Support for a new dataset, that cannot be covered cleanly by the generic `auto` pipeline and should be added as a formatter.
 
   - type: input
     id: dataset-name
