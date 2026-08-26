@@ -31,7 +31,7 @@ from prep.formatter.auto_cls import load_cls
         ),
     ],
 )
-def test_load_eval(path: str, split, expected: dict, labels: list[str]) -> None:
+def test_load_cls(path: str, split, expected: dict, labels: list[str]) -> None:
     first_example = load_cls(
         path,
         split,
