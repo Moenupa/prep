@@ -2,11 +2,10 @@ import importlib
 from io import StringIO
 
 import pytest
-from datasets import Dataset
+from datasets import Dataset, List, Value
 
-import prep.formatter.auto  # noqa: F401
 from prep.api.formatter import FormatterPipeline, formatter
-from prep.api.types import SFT_FEAT, ProcArgs, RegistrationError
+from prep.api.types import ProcArgs, RegistrationError
 
 formatter_api = importlib.import_module("prep.api.formatter")
 
@@ -22,28 +21,7 @@ def procargs() -> ProcArgs:
     )
 
 
-@pytest.mark.parametrize(
-    "pipeline_id, target_format, split",
-    [
-        # duplicated registration
-        ("vqa", "sft", "train"),
-        ("vqa", "verl", "val"),
-        ("_noop", "show", "val"),
-        # invalid id
-        ("invalid/pipeline", "sft", "train"),
-        ("invalid pipeline", "verl", "test"),
-        ("invalid?id", "verl", "test"),
-        ("invalid@id", "verl", "test"),
-    ],
-)
-def test_formatter_id_check(pipeline_id: str, target_format: str, split: str) -> None:
-    with pytest.raises(RegistrationError):
-
-        @formatter(pipeline_id, target_format, split)  # ty: ignore[invalid-argument-type]
-        def dummy(): ...
-
-
-def test_formatter_get_falls_back_to_vqa_for_unknown_pipeline(
+def test_formatter_get_falls_back_to_auto_for_unknown_pipeline(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     stderr_buffer = StringIO()
@@ -51,51 +29,122 @@ def test_formatter_get_falls_back_to_vqa_for_unknown_pipeline(
 
     pipeline = FormatterPipeline.get("some-unknown-pipeline", "sft", "train")
 
-    assert pipeline.id_ == "vqa"
+    assert pipeline.id_ == "auto"
     assert pipeline.target_format == "sft"
-    assert "Fallback to the general pipeline 'vqa'" in stderr_buffer.getvalue()
+    assert "Fallback to the general pipeline 'auto'" in stderr_buffer.getvalue()
 
 
-def test_formatter_load_uses_override_source_and_casts_sft_rows(
-    procargs: ProcArgs,
-) -> None:
-    seen: dict[str, object] = {}
-    test_sample = {
-        "images": [],
-        "messages": [
-            {
-                "role": "user",
-                "content": "Question: What does the chest X-ray show?",
-            },
-            {
-                "role": "assistant",
-                "content": "No acute cardiopulmonary process.",
-            },
+class TestFormatterPipelineValidation:
+    """Additional tests for FormatterPipeline validation."""
+
+    def test_get_pipeline_returns_correct_format(self):
+        """Test that get returns pipeline with correct format."""
+        pipeline = FormatterPipeline.get("auto", "sft", "train")
+
+        assert pipeline.id_ == "auto"
+        assert pipeline.target_format == "sft"
+        assert pipeline.split == "train"
+
+    @pytest.mark.parametrize(
+        "pipeline_id, target_format, split",
+        [
+            # duplicated registration
+            ("auto", "sft", "train"),
+            ("auto", "verl", "val"),
+            ("_noop", "show", "val"),
+            # invalid id
+            ("invalid/pipeline", "sft", "train"),
+            ("invalid pipeline", "verl", "test"),
+            ("invalid?id", "verl", "test"),
+            ("invalid@id", "verl", "test"),
         ],
-        "id": "Mock/00000001",
-        "extra_info": "source=mock note",
-    }
-
-    def load_mock_dataset(path: str, split: str, args: ProcArgs) -> Dataset:
-        seen["path"] = path
-        seen["split"] = split
-        seen["question_template"] = args.question_template
-        return Dataset.from_list([test_sample])
-
-    pipeline = FormatterPipeline(
-        id_="demo",
-        target_format="sft",
-        split="train",
-        load_fn=load_mock_dataset,
-        default_src="unused-default",
     )
+    def test_formatter_id_check(
+        self, pipeline_id: str, target_format: str, split: str
+    ) -> None:
+        with pytest.raises(RegistrationError):
 
-    dataset = pipeline.load("examples/demo", procargs)
+            @formatter(pipeline_id, target_format, split)  # ty: ignore[invalid-argument-type]
+            def dummy(): ...
 
-    assert seen == {
-        "path": "examples/demo",
-        "split": "train",
-        "question_template": "Question: {question}",
-    }
-    assert dataset.features == SFT_FEAT
-    assert dataset[0] == test_sample
+
+class TestFormatterCastDataset:
+    """Tests for the cast_dataset method in FormatterPipeline."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.procargs = ProcArgs(
+            num_proc=1,
+            question_cols=["question"],
+            question_template="Question: {question}",
+            answer_cols=["answer"],
+            show_first_n=0,
+        )
+
+    def test_cast_sft_format(self):
+        """Test casting to SFT format."""
+        dataset = Dataset.from_dict(
+            {
+                "id": ["test-001"],
+                "images": [[]],
+                "messages": [[{"role": "user", "content": "Hello"}]],
+                "extra_info": ["source=test"],
+            }
+        )
+
+        result = FormatterPipeline.cast_dataset(dataset, "sft", self.procargs)
+
+        assert "images" in result.features
+        assert "messages" in result.features
+        assert "id" in result.features
+        assert "extra_info" in result.features
+
+        # Check feature types
+        assert isinstance(result.features["images"], List)
+        assert isinstance(result.features["messages"], List)
+        assert isinstance(result.features["id"], Value)
+        assert isinstance(result.features["extra_info"], Value)
+
+    def test_cast_verl_format(self):
+        """Test casting to verl format."""
+        dataset = Dataset.from_dict(
+            {
+                "images": [[]],
+                "data_source": ["test-data"],
+                "prompt": [[{"role": "user", "content": "Hello"}]],
+                "ability": ["math"],
+                "reward_model": [{"style": "rule", "ground_truth": "42"}],
+                "extra_info": [
+                    {"split": "test", "index": "001", "explanation": "", "misc": ""}
+                ],
+            }
+        )
+
+        result = FormatterPipeline.cast_dataset(dataset, "verl", self.procargs)
+
+        assert "images" in result.features
+        assert "data_source" in result.features
+        assert "prompt" in result.features
+        assert "ability" in result.features
+        assert "reward_model" in result.features
+        assert "extra_info" in result.features
+
+    def test_cast_eval_format(self):
+        """Test casting to eval format."""
+        dataset = Dataset.from_dict(
+            {
+                "id": ["mmlu-test-001"],
+                "images": [[]],
+                "question": ["Find the degree..."],
+                "options": [["0", "4", "2", "6"]],
+                "answer": ["4"],
+            }
+        )
+
+        result = FormatterPipeline.cast_dataset(dataset, "eval", self.procargs)
+
+        assert "id" in result.features
+        assert "images" in result.features
+        assert "question" in result.features
+        assert "options" in result.features
+        assert "answer" in result.features

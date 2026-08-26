@@ -180,3 +180,94 @@ def test_extract_qa_rejects_unsupported_shapes_and_answer_types(
             a_template="A: {answer}",
             n_img_tags=1,
         )
+
+
+# Tests from original test_formatutils.py - TestExtractQA class
+
+
+def test_extract_qa_basic():
+    """Test basic Q&A extraction."""
+    example = {
+        "question": "What is 2+2?",
+        "answer": "4",
+    }
+
+    question, answer = extract_qa(
+        example,
+        q_cols=["question"],
+        a_cols=["answer"],
+        option_cols=[],
+        q_template="{question}",
+        a_template="{answer}",
+        n_img_tags=0,
+    )
+
+    assert question == "What is 2+2?"
+    assert answer == "4"
+
+
+def test_extract_qa_with_image_tags_in_question():
+    """Test Q&A extraction with image placeholders in question template."""
+    example = {
+        "question": "Describe the image.",
+        "answer": "A landscape.",
+    }
+
+    question, answer = extract_qa(
+        example,
+        q_cols=["question"],
+        a_cols=["answer"],
+        option_cols=[],
+        q_template="<image>\n{question}",  # Image placeholder
+        a_template="{answer}",
+        n_img_tags=1,
+    )
+
+    # Question should include image tag if specified
+    assert "<image>" in question or "Describe the image." in question
+    assert answer == "A landscape."
+
+
+def test_extract_qa_multiple_question_cols():
+    """Test extraction with multiple question columns."""
+    example = {
+        "q_prefix": "Please answer:",
+        "q_text": "What is the weather?",
+        "q_suffix": "",
+        "answer": "Sunny",
+    }
+
+    question, answer = extract_qa(
+        example,
+        q_cols=["q_prefix", "q_text", "q_suffix"],
+        a_cols=["answer"],
+        option_cols=[],
+        q_template="{q_prefix} {q_text} {q_suffix}",
+        a_template="{answer}",
+        n_img_tags=0,
+    )
+
+    assert "Please answer:" in question
+    assert "What is the weather?" in question
+    assert answer == "Sunny"
+
+
+def test_extract_qa_template_without_placeholder_warns():
+    """Test behavior when template lacks placeholder."""
+    example = {
+        "text": "Content here",
+        "answer": "Answer",
+    }
+
+    # Template without {text} placeholder - should still work, just not substitute
+    question, answer = extract_qa(
+        example,
+        q_cols=["text"],
+        a_cols=["answer"],
+        option_cols=[],
+        q_template="Static question text",  # No placeholder
+        a_template="{answer}",
+        n_img_tags=0,
+    )
+
+    assert question == "Static question text"

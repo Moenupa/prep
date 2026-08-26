@@ -24,7 +24,7 @@ body:
       options:
         - label: "prep CLI conversion"
         - label: "ppls pipeline listing or output status"
-        - label: "Generic vqa pipeline"
+        - label: "Generic auto pipeline"
         - label: "Dataset-specific formatter"
         - label: "Local file or load_from_disk source"
         - label: "Hugging Face dataset source"
@@ -48,8 +48,8 @@ body:
     id: pipeline-id
     attributes:
       label: Pipeline ID
-      description: Provide the pipeline ID you used, such as `vqa`, `geo3k`, or a custom formatter ID.
-      placeholder: vqa
+      description: Provide the pipeline ID you used, such as `auto`, `geo3k`, or a custom formatter ID.
+      placeholder: auto
 
   - type: input
     id: split
@@ -82,7 +82,7 @@ body:
       placeholder: |
         Steps to reproduce the behavior:
         ```
-        prep eval vqa val path/to/data.jsonl --q-cols question --a-cols answer
+        prep eval auto val path/to/data.jsonl --q-cols question --a-cols answer
         ```
 
         Error output:

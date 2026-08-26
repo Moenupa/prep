@@ -58,6 +58,9 @@ def prep(
     a_template: str = typer.Option(
         default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
     ),
+    labels: list[str] = typer.Option(
+        default=[], envvar="LABELS", rich_help_panel=_AUTO
+    ),
     verl_ability: str = typer.Option(
         default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
     ),
@@ -79,6 +82,7 @@ def prep(
             option_cols=op_cols,
             answer_cols=a_cols,
             answer_template=a_template,
+            labels=labels,
             verl_ability=verl_ability,
             verl_style=verl_style,
             show_first_n=show,

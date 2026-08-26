@@ -29,9 +29,9 @@ def auto_sft(
     }
 
 
-@formatter("vqa", "sft", "train", default_src=None)
-@formatter("vqa", "sft", "val", default_src=None)
-@formatter("vqa", "sft", "test", default_src=None)
+@formatter("auto", "sft", "train", default_src=None)
+@formatter("auto", "sft", "val", default_src=None)
+@formatter("auto", "sft", "test", default_src=None)
 def load_sft(path: str, split: str, args: ProcArgs):
     d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)
@@ -90,9 +90,9 @@ def auto_verl(
     }
 
 
-@formatter("vqa", "verl", "train", default_src=None)
-@formatter("vqa", "verl", "val", default_src=None)
-@formatter("vqa", "verl", "test", default_src=None)
+@formatter("auto", "verl", "train", default_src=None)
+@formatter("auto", "verl", "val", default_src=None)
+@formatter("auto", "verl", "test", default_src=None)
 def load_verl(path: str, split: str, args: ProcArgs):
     d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)
@@ -158,9 +158,9 @@ def auto_eval(
     }
 
 
-@formatter("vqa", "eval", "train", default_src=None)
-@formatter("vqa", "eval", "val", default_src=None)
-@formatter("vqa", "eval", "test", default_src=None)
+@formatter("auto", "eval", "train", default_src=None)
+@formatter("auto", "eval", "val", default_src=None)
+@formatter("auto", "eval", "test", default_src=None)
 def load_eval(path: str, split: str, args: ProcArgs):
     d = adaptive_load_dataset(path, split=split, args=args)
     args.peek(d, level=10)

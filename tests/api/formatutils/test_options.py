@@ -73,3 +73,50 @@ def test_format_options_renders_expected_training_text(
     expected: str,
 ) -> None:
     assert format_options(options) == expected
+
+
+@pytest.mark.parametrize(
+    ("entry", "cols", "expected"),
+    [
+        pytest.param(
+            {"question": "Q", "answer": "A"},
+            [],
+            [],
+            id="empty-cols-returns-empty-list",
+        ),
+        pytest.param(
+            {"option_a": "Choice A"},
+            ["option_a"],
+            ["Choice A"],
+            id="single-col-returns-single-option",
+        ),
+        pytest.param(
+            {
+                "A": "Option A text",
+                "B": "Option B text",
+                "C": "Option C text",
+                "D": "Option D text",
+            },
+            ["A", "B", "C", "D"],
+            ["Option A text", "Option B text", "Option C text", "Option D text"],
+            id="multiple-cols-returns-all-options",
+        ),
+        pytest.param(
+            {
+                "d": "Last",
+                "a": "First",
+                "c": "Third",
+                "b": "Second",
+            },
+            ["a", "b", "c", "d"],
+            ["First", "Second", "Third", "Last"],
+            id="preserves-option-order",
+        ),
+    ],
+)
+def test_extract_options_handles_various_input_shapes(
+    entry: dict,
+    cols: list[str],
+    expected: list,
+) -> None:
+    assert extract_options(entry, cols) == expected

@@ -239,7 +239,7 @@ class PathIO:
     @staticmethod
     def scan_datasets(save_root: Path) -> dict[tuple[DataFormat, str], Path]:
         return {
-            # out/verl/vqa -> (verl, vqa): out/verl/vqa
+            # out/verl/xxx -> (verl, xxx): out/verl/xxx
             (each_format, dataset_dir.stem): dataset_dir
             for each_format in get_valid_formats()
             if (save_root / each_format).exists()

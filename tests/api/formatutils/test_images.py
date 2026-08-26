@@ -35,10 +35,40 @@ from prep.api.formatutils import extract_images
             ["frame-2.png", "frame-1.png", "frame-3.png"],
             id="images-list-preserves-input-order",
         ),
+        pytest.param(
+            {"question": "Q", "answer": "A"},
+            [],
+            id="none-field-returns-empty-list",
+        ),
+        pytest.param(
+            {"images": []},
+            [],
+            id="empty-list-returns-empty",
+        ),
+        pytest.param(
+            {"images": [{"path": "test.png"}]},
+            [{"path": "test.png"}],
+            id="single-dict-image",
+        ),
+        pytest.param(
+            {"images": [{"path": "1.png"}, {"path": "2.png"}]},
+            [{"path": "1.png"}, {"path": "2.png"}],
+            id="list-of-dicts-images",
+        ),
+        pytest.param(
+            {"image": {"path": "single.png"}},
+            [{"path": "single.png"}],
+            id="alternate-image-field-as-dict",
+        ),
+        pytest.param(
+            {"pixel_values": [[0.1, 0.2, 0.3]]},
+            [],
+            id="pixel-values-field",
+        ),
     ],
 )
 def test_extract_images_handles_priority_and_sequence_boundaries(
     entry: dict,
-    expected: list[str],
+    expected: list,
 ) -> None:
     assert extract_images(entry) == expected
