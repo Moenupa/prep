@@ -2,7 +2,7 @@ import importlib
 from io import StringIO
 
 import pytest
-from datasets import Dataset, List, Value
+from datasets import ClassLabel, Dataset, List, Value
 
 from prep.api.formatter import FormatterPipeline, formatter
 from prep.api.types import ProcArgs, RegistrationError
@@ -148,3 +148,62 @@ class TestFormatterCastDataset:
         assert "question" in result.features
         assert "options" in result.features
         assert "answer" in result.features
+
+    def test_cast_cls_format_requires_labels(self):
+        """Test that classification format requires labels."""
+        dataset = Dataset.from_dict(
+            {
+                "id": ["cifar-001"],
+                "image": [None],
+                "label": ["airplane"],
+                "extra_info": [""],
+            }
+        )
+
+        args_with_labels = ProcArgs(
+            num_proc=1,
+            question_cols=["question"],
+            question_template="Question: {question}",
+            answer_cols=["answer"],
+            labels=["airplane", "automobile", "bird", "cat"],
+            show_first_n=0,
+        )
+
+        result = FormatterPipeline.cast_dataset(dataset, "cls", args_with_labels)
+
+        assert "id" in result.features
+        assert "image" in result.features
+        assert "label" in result.features
+        assert "extra_info" in result.features
+
+        # Check that label is ClassLabel with correct names
+        assert isinstance(result.features["label"], ClassLabel)
+        assert result.features["label"].names == [
+            "airplane",
+            "automobile",
+            "bird",
+            "cat",
+        ]
+
+    def test_cast_cls_format_fails_without_labels(self):
+        """Test that classification format fails without labels."""
+        dataset = Dataset.from_dict(
+            {
+                "id": ["cifar-001"],
+                "image": [None],
+                "label": ["airplane"],
+                "extra_info": [""],
+            }
+        )
+
+        args_without_labels = ProcArgs(
+            num_proc=1,
+            question_cols=["question"],
+            question_template="Question: {question}",
+            answer_cols=["answer"],
+            labels=[],  # No labels provided
+            show_first_n=0,
+        )
+
+        with pytest.raises(AssertionError, match="Please provide via env var"):
+            FormatterPipeline.cast_dataset(dataset, "cls", args_without_labels)

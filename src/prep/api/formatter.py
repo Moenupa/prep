@@ -117,9 +117,10 @@ class FormatterPipeline:
                 validate_image_tags(sample["messages"], expected_n_img=n_img)
             case "eval":
                 n_tags = count_img_tags(sample["question"])
-                assert n_tags == n_img, (
-                    f"Mismatch: number of images {n_img} != {n_tags} {IMAGE_TAG} tags."
-                )
+                if n_tags != n_img:
+                    raise ValueError(
+                        f"Mismatch: number of images {n_img} != {n_tags} {IMAGE_TAG} tags."
+                    )
 
     @staticmethod
     def cast_dataset(d: Dataset, target_format: DataFormat, args: ProcArgs) -> Dataset:
@@ -171,9 +172,10 @@ class FormatterPipeline:
                 )
             case "cls":
                 # for classification datasets, e.g. cifar10, imagenet, etc.
-                assert len(args.labels) > 0, (
-                    "Please provide via env var `LABELS='cls1 cls2'` or CLI option `--labels cls1 --labels cls2`."
-                )
+                if not args.labels:
+                    raise ValueError(
+                        "Please provide labels via ENV `LABELS='cls1 cls2'` or CLI option `--labels cls1 --labels cls2`."
+                    )
                 return d.cast(
                     Features(
                         id=Value("string"),
