@@ -1,5 +1,4 @@
 import importlib
-from io import StringIO
 
 import pytest
 from datasets import ClassLabel, Dataset, List, Value
@@ -22,16 +21,14 @@ def procargs() -> ProcArgs:
 
 
 def test_formatter_get_falls_back_to_auto_for_unknown_pipeline(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
 ) -> None:
-    stderr_buffer = StringIO()
-    monkeypatch.setattr(formatter_api, "stderr", stderr_buffer)
-
     pipeline = FormatterPipeline.get("some-unknown-pipeline", "sft", "train")
 
     assert pipeline.id_ == "auto"
     assert pipeline.target_format == "sft"
-    assert "Fallback to the general pipeline 'auto'" in stderr_buffer.getvalue()
+    stdout_msg: str = capsys.readouterr().out
+    assert "fallback" in stdout_msg.lower() and "auto" in stdout_msg
 
 
 class TestFormatterPipelineValidation:

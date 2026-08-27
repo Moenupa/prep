@@ -87,9 +87,10 @@ class FormatterPipeline:
             return _FORMATTER_REGISTRY[("_", "show", split)]
         k = (id_, target_format, split)
         if k not in _FORMATTER_REGISTRY:
+            logger.warning(f"{WARN_PREFIX}Formatter pipeline not registered for {k}. ")
             logger.warning(
-                f"{WARN_PREFIX}Formatter pipeline not registered for {k}. "
-                "Fallback to the general pipeline 'auto', which may result in unexpected formatting issues.",
+                "Fallback to generic pipeline 'auto',"
+                " which may cause unexpected formatting issues.",
             )
             return _FORMATTER_REGISTRY[("auto", target_format, split)]
 
