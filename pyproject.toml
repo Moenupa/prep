@@ -75,7 +75,9 @@ docstring-code-format = true
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-v --import-mode=importlib"
-filterwarnings = []
+filterwarnings = [
+    "ignore::DeprecationWarning:multiprocess.popen_fork",
+]
 markers = [
     "slow: mark tests as slow (pytest -m 'not slow' or set RUN_SLOW=1 to run)",
 ]

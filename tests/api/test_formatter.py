@@ -1,7 +1,7 @@
 import importlib
 
 import pytest
-from datasets import ClassLabel, Dataset, List, Value
+from datasets import ClassLabel, Dataset, Features, Image, List, Value
 
 from prep.api.formatter import FormatterPipeline, formatter
 from prep.api.types import ProcArgs, RegistrationError
@@ -78,8 +78,8 @@ class TestFormatterCastDataset:
             show_first_n=0,
         )
 
-    def test_cast_sft_format(self):
-        """Test casting to SFT format."""
+    def test_cast_sft(self):
+        """Cast a dataset to SFT format."""
         dataset = Dataset.from_dict(
             {
                 "id": ["test-001"],
@@ -89,7 +89,7 @@ class TestFormatterCastDataset:
             }
         )
 
-        result = FormatterPipeline.cast_dataset(dataset, "sft", self.procargs)
+        result = FormatterPipeline.cast_sft(dataset, self.procargs)
 
         assert "images" in result.features
         assert "messages" in result.features
@@ -102,8 +102,8 @@ class TestFormatterCastDataset:
         assert isinstance(result.features["id"], Value)
         assert isinstance(result.features["extra_info"], Value)
 
-    def test_cast_verl_format(self):
-        """Test casting to verl format."""
+    def test_cast_verl(self):
+        """Cast a dataset to verl format."""
         dataset = Dataset.from_dict(
             {
                 "images": [[]],
@@ -117,7 +117,7 @@ class TestFormatterCastDataset:
             }
         )
 
-        result = FormatterPipeline.cast_dataset(dataset, "verl", self.procargs)
+        result = FormatterPipeline.cast_verl(dataset, self.procargs)
 
         assert "images" in result.features
         assert "data_source" in result.features
@@ -126,8 +126,8 @@ class TestFormatterCastDataset:
         assert "reward_model" in result.features
         assert "extra_info" in result.features
 
-    def test_cast_eval_format(self):
-        """Test casting to eval format."""
+    def test_cast_eval(self):
+        """Cast a dataset to eval format."""
         dataset = Dataset.from_dict(
             {
                 "id": ["mmlu-test-001"],
@@ -138,7 +138,7 @@ class TestFormatterCastDataset:
             }
         )
 
-        result = FormatterPipeline.cast_dataset(dataset, "eval", self.procargs)
+        result = FormatterPipeline.cast_eval(dataset, self.procargs)
 
         assert "id" in result.features
         assert "images" in result.features
@@ -146,8 +146,8 @@ class TestFormatterCastDataset:
         assert "options" in result.features
         assert "answer" in result.features
 
-    def test_cast_cls_format_requires_labels(self):
-        """Test that classification format requires labels."""
+    def test_cast_cls_uses_configured_labels(self):
+        """Use configured labels when the input dataset has no label schema."""
         dataset = Dataset.from_dict(
             {
                 "id": ["cifar-001"],
@@ -166,7 +166,7 @@ class TestFormatterCastDataset:
             show_first_n=0,
         )
 
-        result = FormatterPipeline.cast_dataset(dataset, "cls", args_with_labels)
+        result = FormatterPipeline.cast_cls(dataset, args_with_labels)
 
         assert "id" in result.features
         assert "image" in result.features
@@ -182,8 +182,39 @@ class TestFormatterCastDataset:
             "cat",
         ]
 
-    def test_cast_cls_format_fails_without_labels(self):
-        """Test that classification format fails without labels."""
+    def test_cast_cls_preserves_existing_label_schema(self):
+        """Preserve the input ClassLabel schema without configured labels."""
+        label_feature = ClassLabel(names=["airplane", "automobile", "bird", "cat"])
+        dataset = Dataset.from_dict(
+            {
+                "id": ["cifar-001"],
+                "image": [None],
+                "label": [0],
+                "extra_info": [""],
+            },
+            features=Features(
+                id=Value("string"),
+                image=Image(decode=True),
+                label=label_feature,
+                extra_info=Value("string"),
+            ),
+        )
+
+        args_without_labels = ProcArgs(
+            num_proc=1,
+            question_cols=["question"],
+            question_template="Question: {question}",
+            answer_cols=["answer"],
+            labels=[],  # No labels provided
+            show_first_n=0,
+        )
+
+        result = FormatterPipeline.cast_cls(dataset, args_without_labels)
+
+        assert result.features["label"] == label_feature
+
+    def test_cast_cls_fails_without_a_label_schema_or_configured_labels(self):
+        """Require configured labels when the input lacks a ClassLabel schema."""
         dataset = Dataset.from_dict(
             {
                 "id": ["cifar-001"],
@@ -198,9 +229,9 @@ class TestFormatterCastDataset:
             question_cols=["question"],
             question_template="Question: {question}",
             answer_cols=["answer"],
-            labels=[],  # No labels provided
+            labels=[],
             show_first_n=0,
         )
 
-        with pytest.raises(ValueError):
-            FormatterPipeline.cast_dataset(dataset, "cls", args_without_labels)
+        with pytest.raises(ValueError, match="labels"):
+            FormatterPipeline.cast_cls(dataset, args_without_labels)
