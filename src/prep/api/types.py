@@ -11,7 +11,7 @@ from ..constants import (
 )
 from .log import get_logger
 
-_DataFormat = Literal["sft", "verl", "eval", "show"]
+_DataFormat = Literal["sft", "verl", "eval", "clip", "cls", "show"]
 _Split = Literal["train", "val", "test"]
 type DataFormat = _DataFormat
 type Split = _Split
