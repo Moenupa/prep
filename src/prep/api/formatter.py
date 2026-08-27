@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from sys import stderr
 
 from datasets import ClassLabel, Dataset, Features, Image, List, Value
 
@@ -88,10 +87,10 @@ class FormatterPipeline:
             return _FORMATTER_REGISTRY[("_", "show", split)]
         k = (id_, target_format, split)
         if k not in _FORMATTER_REGISTRY:
-            print(
-                f"{WARN_PREFIX}Formatter pipeline not registered for {k}. "
-                "Fallback to the general pipeline 'auto', which may result in unexpected formatting issues.",
-                file=stderr,
+            logger.warning(f"{WARN_PREFIX}Formatter pipeline not registered for {k}. ")
+            logger.warning(
+                "Fallback to generic pipeline 'auto',"
+                " which may cause unexpected formatting issues.",
             )
             return _FORMATTER_REGISTRY[("auto", target_format, split)]
 

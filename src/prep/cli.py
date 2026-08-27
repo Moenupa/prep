@@ -12,6 +12,7 @@ from .constants import (
     DEFAULT_QTEMP,
 )
 
+_INTERACTIVE = "Interactive Options"
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
 _AUTO = "Auto Conversion Options"
@@ -25,7 +26,8 @@ def prep(
     split: _Split = typer.Argument("train", help="Split to convert."),
     src: str | None = typer.Argument(None, envvar="SRC", help="Source, HF/local path."),
     *,
-    show: int = typer.Option(3, envvar="SHOW", help="Preview first n samples."),
+    head: int = typer.Option(3, envvar="HEAD", help="Preview first n samples."),
+    tail: int = typer.Option(0, envvar="TAIL", help="Preview last n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
     save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
     save_root: Path = typer.Option(
@@ -67,6 +69,12 @@ def prep(
     verl_style: str = typer.Option(
         default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
     ),
+    interactive: bool = typer.Option(
+        False,
+        envvar="UI",
+        rich_help_panel=_INTERACTIVE,
+        help="Enable interactive prompts for save/upload.",
+    ),
 ):
     pipeline = FormatterPipeline.get(
         id_=pipeline_id,
@@ -85,7 +93,8 @@ def prep(
             labels=labels,
             verl_ability=verl_ability,
             verl_style=verl_style,
-            show_first_n=show,
+            show_first_n=head,
+            show_last_n=tail,
             max_samples=max_samples,
         ),
     )
@@ -97,6 +106,7 @@ def prep(
         hf_repo=hf_repo or pipeline_id,
         hf_subset=hf_subset,
         hf_private=hf_private,
+        interactive=interactive,
     )
     action.do_save(d, pipeline=pipeline, nproc=save_nproc, id_override=pipeline_id)
     action.do_upload(d, split=pipeline.split, nproc=hf_nproc)

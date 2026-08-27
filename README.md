@@ -4,10 +4,10 @@
 ![Release](https://img.shields.io/github/v/release/Moenupa/prep)
 ![LICENSE](https://img.shields.io/github/license/Moenupa/prep)
 
-`prep` is an agent-friendly CLI for converting LLM/ML datasets into common standard training and evaluation schemas backed by Hugging Face `datasets`.
+`prep` is an agent-friendly CLI for converting LLM/ML datasets into common
+standard training and evaluation schemas backed by Hugging Face `datasets`.
 
-It currently supports four CLI target modes:
-It currently supports five CLI target modes:
+It currently supports the following target formats:
 - `sft`: two-turn OpenAI-style chat samples with images.
 - `verl`: VERL-compatible prompt/reward records with images.
 - `eval`: MMMU-style evaluation records with question, options, answer, and images.
@@ -18,15 +18,16 @@ It currently supports five CLI target modes:
 
 ```sh
 uv tool install prep-cli
-# or use pip
-pip install prep-cli
+# pip install prep-cli # or pip
+prep --help
 ```
 
-<details><summary>Install from source:</summary>
+<details><summary>Alternatively, you can install from source:</summary>
 
 ```sh
+git clone https://github.com/Moenupa/prep.git
 uv sync --dev
-pip install -e .
+uv run prep --help
 ```
 </details>
 
@@ -35,14 +36,13 @@ pip install -e .
 Convert a dataset:
 
 ```sh
-prep TARGET_FORMAT PIPELINE_ID [SPLIT] [SOURCE] [OPTIONS]
+prep TARGET_FORMAT PIPELINE_ID [SPLIT] [SOURCE[@SUBSET][:SPLIT]] [OPTIONS]
 ```
 
 Examples:
 
 ```sh
-# `auto` is a generic alias for datasets that already resemble common VQA formats.
-# it is also the fallback for datasets without a known formatter.
+# `auto`: generic conversion pipeline and the fallback for datasets without a known formatter.
 # you must provide SPLIT and SOURCE (local path or Hugging Face dataset ID) for this.
 prep sft auto train path/to/data.jsonl --no-save
 prep eval myalias val my-org/my-dataset --q-cols question --q-cols problem --a-cols answer
@@ -57,6 +57,7 @@ prep show - train path/to/local_dataset --no-save --no-hf
 List registered pipelines and local output status:
 
 ```sh
+# ppls [OUTPUT_ROOT] [OPTIONS]
 ppls
 ppls out --as-json
 ppls out --filter-format 's*'
@@ -82,7 +83,7 @@ The generic `auto` pipelines expose these important knobs:
 - `--op-cols`: option columns or choice fields. Defaults to `options`, `choices`, and `choice_a` through `choice_j`.
 - `--q-template`: formats the prompt text. Defaults to `{im_tags}{question}{options}`.
 - `--a-template`: formats the final answer text. Defaults to `{answer}`.
-- `--verl-ability` and `--verl-style`: fill VERL metadata fields.
+- `--verl-ability`/`--verl-style`: fill VERL metadata fields.
 - `--max-samples`: truncate without shuffling.
 
 Shared extraction logic supports these input patterns:

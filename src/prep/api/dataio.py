@@ -1,3 +1,4 @@
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from fnmatch import fnmatch
@@ -40,6 +41,28 @@ _FORMATS = {
 }
 
 
+def resolve_remote(source: str) -> tuple[str, str | None, str | None]:
+    """Resolve a remote dataset source into its components.
+
+    Args:
+        source (str): dataset ID in the format of `org/data[@subset][:split]`.
+
+    Returns:
+        tuple[str, str | None, str | None]: A tuple containing the source, subset, and split.
+    """
+    match = re.match(
+        r"^(?P<source>[^@]+)(?:@(?P<subset>[^:]+))?(?::(?P<split>.+))?$", source
+    )
+    if not match:
+        raise ValueError(f"Invalid source format: {source!r}")
+
+    return (
+        match.group("source"),
+        match.group("subset"),
+        match.group("split"),
+    )
+
+
 def resolve_split(split: str | None, available: list[str]) -> str:
     if split is None:
         if len(available) == 1:
@@ -75,6 +98,32 @@ def load_local(source: str, split: str | None = None) -> Dataset | None:
     return d[resolve_split(split, list(map(str, d.keys())))]
 
 
+def load_remote(
+    source: str, split: str | None = None, args: ProcArgs | None = None
+) -> Dataset:
+    """Load a dataset from Hugging Face Hub.
+
+    Args:
+        source (str): dataset ID in the format of `org/data[@subset][:split]`.
+        split (str | None, optional): dataset split name. Defaults to None.
+        args (ProcArgs | None, optional): processing arguments. Defaults to None.
+
+    Returns:
+        Dataset: the loaded dataset.
+    """
+    source, subset, override_split = resolve_remote(source)
+
+    d = load_dataset(
+        source,
+        subset,
+        split=resolve_split(
+            override_split or split, get_dataset_split_names(source, subset)
+        ),
+        num_proc=None if args is None else args.num_proc,
+    )
+    return d
+
+
 def adaptive_load_dataset(
     source: str,
     split: str | None = None,
@@ -83,28 +132,20 @@ def adaptive_load_dataset(
     path = Path(source)
 
     d = None
-    nproc = None if args is None else args.num_proc
 
     # non-local -> HF remote
     if not path.exists():
         if split is None:
             raise ValueError("Split must be specified for remote datasets.")
-        subset: str | None = None
-        if "@" in source:
-            source, subset = source.split("@", 1)
-        return load_dataset(
-            source,
-            subset,
-            split=resolve_split(split, get_dataset_split_names(source, subset)),
-            num_proc=nproc,
-        )
+        return load_remote(source, split, args)
 
     # local -> 1. dir 2. file
     elif path.is_dir():
         d = load_local(source, split)
         # try to load from locally hf-downloaded datasets
         if d is None and split is not None:
-            d = load_dataset(source, split=split, num_proc=nproc)
+            d = load_remote(source, split, args)
+
     elif path.is_file():
         if path.suffix not in _FORMATS:
             raise ValueError(f"Unsupported file format: {path.suffix!r}")
@@ -278,6 +319,7 @@ class OutputActions(PathIO):
     hf_repo: str
     hf_subset: str | None
     hf_private: bool
+    interactive: bool = False
 
     @staticmethod
     def _resolve_save_path(save_path: Path) -> Path | None:
@@ -333,12 +375,16 @@ class OutputActions(PathIO):
                 typer.echo(f"{SAVE_PREFIX}Not saving (--no-save passed)")
                 return
             # otherwise, go into interactive mode and figure out save_path
-            case None:
+            case None if self.interactive:
                 resolved_path = self._resolve_save_path(save_path)
                 if resolved_path is None:
                     typer.echo(f"{SAVE_PREFIX}Not saving")
                     return
                 save_path = resolved_path
+            case None:
+                # non-interactive mode: skip saving
+                typer.echo(f"{SAVE_PREFIX}Skipping (non-interactive mode)")
+                return
 
         typer.echo(f"{SAVE_PREFIX}Saving to disk -> {save_path!r}")
         if dry_run:
@@ -439,7 +485,7 @@ class OutputActions(PathIO):
             case False:
                 typer.echo(f"{HF_PREFIX}Not uploading (--no-hf passed)")
                 return
-            case None:
+            case None if self.interactive:
                 target = self._resolve_hf_target(
                     repo_id=repo_id, config_name=subset, split=split
                 )
@@ -447,6 +493,10 @@ class OutputActions(PathIO):
                     typer.echo(f"{HF_PREFIX}Not uploading")
                     return
                 repo_id, subset, split = target
+            case None:
+                # non-interactive mode: skip uploading
+                typer.echo(f"{HF_PREFIX}Skipping (non-interactive mode)")
+                return
 
         typer.echo(
             f"{HF_PREFIX}Uploading to HF -> {repo_id!r}"
