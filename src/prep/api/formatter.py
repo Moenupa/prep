@@ -122,67 +122,92 @@ class FormatterPipeline:
                     )
 
     @staticmethod
+    def cast_verl(d: Dataset, args: ProcArgs) -> Dataset:
+        return d.cast(
+            Features(
+                images=List(Image(decode=True)),
+                data_source=Value("string"),
+                prompt=List(
+                    {"role": Value("string"), "content": Value("large_string")}
+                ),
+                ability=Value("string"),
+                reward_model={
+                    "style": Value("string"),
+                    "ground_truth": Value("string"),
+                },
+                extra_info={
+                    "split": Value("string"),
+                    "index": Value("string"),
+                    # feedback, CoT, or hint to guide better answers
+                    "explanation": Value("large_string"),
+                    # any miscellaneous info accepting json.dumps() stuff
+                    # this is for compatiblity with multiple datasets, supporting any structure
+                    "misc": Value("large_string"),
+                },
+            ),
+            num_proc=args.num_proc,
+        )
+
+    @staticmethod
+    def cast_sft(d: Dataset, args: ProcArgs) -> Dataset:
+        return d.cast(
+            Features(
+                images=List(Image(decode=True)),
+                messages=List(
+                    {"role": Value("string"), "content": Value("large_string")}
+                ),
+                id=Value("string"),
+                extra_info=Value("large_string"),
+            ),
+            num_proc=args.num_proc,
+        )
+
+    @staticmethod
+    def cast_eval(d: Dataset, args: ProcArgs) -> Dataset:
+        return d.cast(
+            Features(
+                id=Value("string"),
+                images=List(Image(decode=True)),
+                question=Value("string"),
+                options=List(Value("string")),
+                answer=Value("string"),
+            ),
+            num_proc=args.num_proc,
+        )
+
+    @staticmethod
+    def cast_cls(d: Dataset, args: ProcArgs) -> Dataset:
+        if isinstance(d.features.get("label"), ClassLabel):
+            label_feature = d.features["label"]
+        elif args.labels:
+            label_feature = ClassLabel(names=args.labels)
+        else:
+            raise ValueError(
+                "Please provide labels via ENV `LABELS='cls1 cls2'`"
+                " or CLI option `--labels cls1 --labels cls2`."
+            )
+
+        return d.cast(
+            Features(
+                id=Value("string"),
+                image=Image(decode=True),
+                label=label_feature,
+                extra_info=Value("large_string"),
+            ),
+            num_proc=args.num_proc,
+        )
+
+    @staticmethod
     def cast_dataset(d: Dataset, target_format: DataFormat, args: ProcArgs) -> Dataset:
         match target_format:
             case "verl":
-                return d.cast(
-                    Features(
-                        images=List(Image(decode=True)),
-                        data_source=Value("string"),
-                        prompt=List(
-                            {"role": Value("string"), "content": Value("large_string")}
-                        ),
-                        ability=Value("string"),
-                        reward_model={
-                            "style": Value("string"),
-                            "ground_truth": Value("string"),
-                        },
-                        extra_info={
-                            "split": Value("string"),
-                            "index": Value("string"),
-                            # feedback, CoT, or hint to guide better answers
-                            "explanation": Value("large_string"),
-                            # any miscellaneous info accepting json.dumps() stuff
-                            # this is for compatiblity with multiple datasets, supporting any structure
-                            "misc": Value("large_string"),
-                        },
-                    )
-                )
+                return FormatterPipeline.cast_verl(d, args)
             case "sft":
-                return d.cast(
-                    Features(
-                        images=List(Image(decode=True)),
-                        messages=List(
-                            {"role": Value("string"), "content": Value("large_string")}
-                        ),
-                        id=Value("string"),
-                        extra_info=Value("large_string"),
-                    )
-                )
+                return FormatterPipeline.cast_sft(d, args)
             case "eval":
-                return d.cast(
-                    Features(
-                        id=Value("string"),
-                        images=List(Image(decode=True)),
-                        question=Value("string"),
-                        options=List(Value("string")),
-                        answer=Value("string"),
-                    )
-                )
+                return FormatterPipeline.cast_eval(d, args)
             case "cls":
-                # for classification datasets, e.g. cifar10, imagenet, etc.
-                if not args.labels:
-                    raise ValueError(
-                        "Please provide labels via ENV `LABELS='cls1 cls2'` or CLI option `--labels cls1 --labels cls2`."
-                    )
-                return d.cast(
-                    Features(
-                        id=Value("string"),
-                        image=Image(decode=True),
-                        label=ClassLabel(names=args.labels),
-                        extra_info=Value("large_string"),
-                    )
-                )
+                return FormatterPipeline.cast_cls(d, args)
             case "show":
                 return d
             case _:
