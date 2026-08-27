@@ -53,6 +53,7 @@ class ProcArgs:
     verl_style: str = "rule"
 
     show_first_n: int = 3
+    show_last_n: int = 0
     max_samples: int | None = None
 
     def __post_init__(self):
@@ -75,6 +76,9 @@ class ProcArgs:
 
         for i in range(min(self.show_first_n, len(d))):
             logger.log(level, d[i])
+
+        for i in range(min(self.show_last_n, len(d))):
+            logger.log(level, d[-(i + 1)])
 
 
 class RegistrationError(Exception):

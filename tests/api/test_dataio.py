@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from prep.api.dataio import PathIO
+from prep.api.dataio import PathIO, resolve_remote
 from prep.api.formatter import FormatterPipeline
 
 
@@ -54,3 +54,45 @@ def test_status_dicts_reports_registered_and_unregistered_datasets(
     assert unregistered_report["train"] == [False]
     assert unregistered_report["val"] == [False]
     assert unregistered_report["test"] == [True]
+
+
+class TestResolveRemote:
+    """Tests for the resolve_remote() function."""
+
+    @pytest.mark.parametrize(
+        ("remote", "expected"),
+        [
+            ("org/dataset", ("org/dataset", None, None)),
+            ("org/dataset@train", ("org/dataset", "train", None)),
+            ("org/dataset:validation", ("org/dataset:validation", None, None)),
+            ("org/dataset@config:test", ("org/dataset", "config", "test")),
+            ("org/team/dataset", ("org/team/dataset", None, None)),
+            ("org/team/dataset@subset1:val", ("org/team/dataset", "subset1", "val")),
+            (
+                "org/dataset@config:train-splits-001",
+                ("org/dataset", "config", "train-splits-001"),
+            ),
+            (":", (":", None, None)),
+            ("org/@dataset@extra:test", ("org/", "dataset@extra", "test")),
+            ("org/dataset@sub:part1:part2", ("org/dataset", "sub", "part1:part2")),
+        ],
+    )
+    def test_resolve_remote(
+        self,
+        remote: str,
+        expected: tuple[str, str | None, str | None],
+    ) -> None:
+        """Test valid remote source parsing."""
+        assert resolve_remote(remote) == expected
+
+    @pytest.mark.parametrize(
+        "remote",
+        [
+            pytest.param("", id="empty-string"),
+            pytest.param("@", id="at-sign-alone"),
+        ],
+    )
+    def test_invalid_source_raises(self, remote: str) -> None:
+        """Test invalid source formats raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid source format"):
+            resolve_remote(remote)
