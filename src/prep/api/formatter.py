@@ -1,7 +1,8 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-from datasets import ClassLabel, Dataset, Features, Image, List, Value
+from datasets import ClassLabel, Features, Image, List, Value
 
 from ..constants import ERROR_PREFIX, ID_PATTERN, IMAGE_TAG, WARN_PREFIX
 from .log import get_logger
@@ -18,6 +19,9 @@ from .validate import (
     validate_image_tags,
     validate_openai_format,
 )
+
+if TYPE_CHECKING:
+    from datasets import Dataset
 
 logger = get_logger(__name__)
 type LoadFn = Callable[[str, Split, ProcArgs], "Dataset"]
@@ -122,7 +126,7 @@ class FormatterPipeline:
                     )
 
     @staticmethod
-    def cast_verl(d: Dataset, args: ProcArgs) -> Dataset:
+    def cast_verl(d: "Dataset", args: ProcArgs) -> "Dataset":
         return d.cast(
             Features(
                 images=List(Image(decode=True)),
@@ -149,7 +153,7 @@ class FormatterPipeline:
         )
 
     @staticmethod
-    def cast_sft(d: Dataset, args: ProcArgs) -> Dataset:
+    def cast_sft(d: "Dataset", args: ProcArgs) -> "Dataset":
         return d.cast(
             Features(
                 images=List(Image(decode=True)),
@@ -163,7 +167,7 @@ class FormatterPipeline:
         )
 
     @staticmethod
-    def cast_eval(d: Dataset, args: ProcArgs) -> Dataset:
+    def cast_eval(d: "Dataset", args: ProcArgs) -> "Dataset":
         return d.cast(
             Features(
                 id=Value("string"),
@@ -176,7 +180,7 @@ class FormatterPipeline:
         )
 
     @staticmethod
-    def cast_cls(d: Dataset, args: ProcArgs) -> Dataset:
+    def cast_cls(d: "Dataset", args: ProcArgs) -> "Dataset":
         if isinstance(d.features.get("label"), ClassLabel):
             label_feature = d.features["label"]
         elif args.labels:
@@ -198,7 +202,9 @@ class FormatterPipeline:
         )
 
     @staticmethod
-    def cast_dataset(d: Dataset, target_format: DataFormat, args: ProcArgs) -> Dataset:
+    def cast_dataset(
+        d: "Dataset", target_format: DataFormat, args: ProcArgs
+    ) -> "Dataset":
         match target_format:
             case "verl":
                 return FormatterPipeline.cast_verl(d, args)
@@ -213,7 +219,7 @@ class FormatterPipeline:
             case _:
                 raise ValueError(f"Unknown target_format {target_format!r}")
 
-    def load(self, override_src: str | None, args: ProcArgs) -> Dataset:
+    def load(self, override_src: str | None, args: ProcArgs) -> "Dataset":
         path = override_src or self.default_src
         if path is None:
             raise ValueError(

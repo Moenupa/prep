@@ -34,3 +34,15 @@ def test_procargs_warns_for_caption_template_and_peeks_first_and_last(caplog) ->
     args.peek(["first", "last"])
     assert "does not contain" in caplog.text
     assert "first" in caplog.text and "last" in caplog.text
+
+
+def test_procargs_defaults_to_no_transforms() -> None:
+    assert ProcArgs().transforms == []
+
+
+def test_procargs_validates_transform_names() -> None:
+    args = ProcArgs(transforms=["crop_black_border"])
+    assert args.transforms == ["crop_black_border"]
+
+    with pytest.raises(KeyError, match="no_such_transform"):
+        ProcArgs(transforms=["crop_black_border", "no_such_transform"])

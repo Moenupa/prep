@@ -10,6 +10,7 @@ from ..constants import (
     DEFAULT_QTEMP,
 )
 from .log import get_logger
+from .transform import validate_transform_names
 
 _DataFormat = Literal["sft", "verl", "eval", "clip", "cls", "show"]
 _Split = Literal["train", "val", "test"]
@@ -35,6 +36,7 @@ class ProcArgs:
         ValueError: If ``question_cols`` is empty.
         ValueError: If ``answer_cols`` is empty.
         ValueError: If ``question_template`` is empty.
+        KeyError: If ``transforms`` contains an unknown transform name.
     """
 
     num_proc: int = 1
@@ -47,6 +49,9 @@ class ProcArgs:
     answer_cols: list[str] = field(default_factory=lambda: DEFAULT_ACOLS)
     answer_template: str = DEFAULT_ATEMP
     labels: list[str] = field(default_factory=lambda: [])
+
+    # image-to-image transforms applied in order during conversion
+    transforms: list[str] = field(default_factory=lambda: [])
 
     # to fill in verl fields, this does not affect verl training
     verl_ability: str = "math"
@@ -68,6 +73,7 @@ class ProcArgs:
             raise ValueError(f"Invalid answer_cols: {self.answer_cols}")
         if not self.question_template:
             raise ValueError(f"Invalid question_template: {self.question_template}")
+        validate_transform_names(self.transforms)
         # we explicitly allow no '{question}' in template for captioning datasets
         if "{question}" not in self.question_template:
             logger.warning(
