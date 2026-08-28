@@ -27,6 +27,7 @@ body:
         - sft
         - verl
         - eval
+        - cls
     validations:
       required: true
 

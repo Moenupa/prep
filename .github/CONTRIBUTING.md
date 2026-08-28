@@ -1,12 +1,11 @@
 # Contributing to Prep
 
 Everyone is welcome to contribute, and we value everybody's contribution. Code
- contributions are not the only way to help the community. Answering questions, helping
- others, and improving the documentation are also immensely valuable.
+contributions are not the only way to help. Answering questions, helping others,
+and improving the documentation are also immensely valuable.
 
-It also helps us if you spread the word! Reference the library in blog posts
- about the awesome projects it made possible, shout out on Twitter every time it has 
- helped you, or simply ⭐️ the repository to say thank you.
+It also helps us if you spread the word: reference the library in blog posts
+about the awesome projects it made possible, or star the repository to say thank you.
 
 **This guide was heavily inspired by [transformers guide to contributing](https://github.com/huggingface/transformers/blob/main/CONTRIBUTING.md).**
 
@@ -25,8 +24,8 @@ There are several ways you can contribute to Prep:
 
 ### Style guide
 
-Prep follows the [Google Python Style Guide][google-python-styleguide] and 
- [PyTorch Docstring Style Guide][torch-docstring-styleguide].
+Prep follows the [Google Python Style Guide][google-python-styleguide] and
+[PyTorch Docstring Style Guide][torch-docstring-styleguide].
 
 [google-python-styleguide]: https://google.github.io/styleguide/pyguide.html
 [torch-docstring-styleguide]: https://github.com/pytorch/pytorch/wiki/Docstring-Guidelines

@@ -1,11 +1,9 @@
-# What does this PR do?
-
-Fixes # (issue)
-
 ## Before submitting
 
-- [ ] I read the [contributor guideline](https://github.com/Moenupa/prep/blob/main/.github/CONTRIBUTING.md) and update the documentation and tests with your changes.
+- [ ] I read the [contributor guideline](https://github.com/Moenupa/prep/blob/main/.github/CONTRIBUTING.md).
 
 ## Changes
 
-- [ ] Describe each feature or fix and link to the relevant issue if applicable; check the box if it is implemented.
+- [ ] Describe each feature or fix and link the related issue/PR.
+- [ ] I updated the tests.
+- [ ] I updated documentation.
