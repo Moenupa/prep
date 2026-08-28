@@ -40,7 +40,8 @@ def resolve_remote(source: str) -> tuple[str, str | None, str | None]:
         tuple[str, str | None, str | None]: A tuple containing the source, subset, and split.
     """
     match = re.match(
-        r"^(?P<source>[^@]+)(?:@(?P<subset>[^:]+))?(?::(?P<split>.+))?$", source
+        r"^(?P<source>[a-zA-Z\d/._-]+)(?:@(?P<subset>[^:]+))?(?::(?P<split>.+))?$",
+        source,
     )
     if not match:
         raise ValueError(f"Invalid source format: {source!r}")
@@ -131,7 +132,8 @@ def adaptive_load_dataset(
 
     # non-local -> HF remote
     if not path.exists():
-        if split is None:
+        _, _, inline_split = resolve_remote(source)
+        if split is None and inline_split is None:
             raise ValueError("Split must be specified for remote datasets.")
         d = load_remote(source, split, args)
 

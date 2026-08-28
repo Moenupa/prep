@@ -21,7 +21,7 @@ class TestResolveRemote:
         [
             ("org/dataset", ("org/dataset", None, None)),
             ("org/dataset@train", ("org/dataset", "train", None)),
-            ("org/dataset:validation", ("org/dataset:validation", None, None)),
+            ("org/dataset:validation", ("org/dataset", None, "validation")),
             ("org/dataset@config:test", ("org/dataset", "config", "test")),
             ("org/team/dataset", ("org/team/dataset", None, None)),
             ("org/team/dataset@subset1:val", ("org/team/dataset", "subset1", "val")),
@@ -29,7 +29,6 @@ class TestResolveRemote:
                 "org/dataset@config:train-splits-001",
                 ("org/dataset", "config", "train-splits-001"),
             ),
-            (":", (":", None, None)),
             ("org/@dataset@extra:test", ("org/", "dataset@extra", "test")),
             ("org/dataset@sub:part1:part2", ("org/dataset", "sub", "part1:part2")),
         ],
@@ -41,7 +40,7 @@ class TestResolveRemote:
     ) -> None:
         assert resolve_remote(remote) == expected
 
-    @pytest.mark.parametrize("remote", ["", "@"])
+    @pytest.mark.parametrize("remote", ["", "@", ":"])
     def test_invalid_source_raises(self, remote: str) -> None:
         with pytest.raises(ValueError, match="Invalid source format"):
             resolve_remote(remote)
@@ -139,6 +138,22 @@ class TestAdaptiveLoadDataset:
     def test_remote_source_requires_split(self) -> None:
         with pytest.raises(ValueError, match="Split must be specified"):
             adaptive_load_dataset("org/missing")
+
+    def test_remote_source_with_inline_split(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        expected = Dataset.from_dict({"value": [1]})
+        calls: list[tuple[str, str | None]] = []
+
+        def fake_load_remote(
+            source: str, split: str | None = None, args: object = None
+        ) -> Dataset:
+            calls.append((source, split))
+            return expected
+
+        monkeypatch.setattr("prep.api.load.load_remote", fake_load_remote)
+        assert adaptive_load_dataset("org/data@subset:train") == expected
+        assert calls == [("org/data@subset:train", None)]
 
     def test_local_dir_falls_back_to_remote(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -1,6 +1,9 @@
+from pathlib import Path
+
+import pytest
 from PIL import Image
 
-from prep.transform.crop import crop_black_border
+from prep.transform.crop import crop_black_border, crop_black_columns
 
 
 def _framed(
@@ -13,6 +16,11 @@ def _framed(
     img = Image.new("RGB", size, bg)
     img.paste(Image.new("RGB", inner, fg), at)
     return img
+
+
+@pytest.fixture
+def real_image_path() -> Path:
+    return Path("in/test.jpg")
 
 
 class TestCropBlackBorder:
@@ -54,3 +62,20 @@ class TestCropBlackBorder:
 
         rgba = _framed().convert("RGBA")
         assert crop_black_border(rgba).mode == "RGBA"
+
+    def test_real_case(self, real_image_path: Path) -> None:
+        try:
+            img = Image.open(real_image_path)
+        except Exception as e:
+            pytest.skip(f"Real image case not available {real_image_path}: {e}")
+
+        crop_black_border(img).save(
+            real_image_path.with_name(
+                real_image_path.stem + "_cropped" + real_image_path.suffix
+            )
+        )
+        crop_black_columns(img).save(
+            real_image_path.with_name(
+                real_image_path.stem + "_cropped_columns" + real_image_path.suffix
+            )
+        )
