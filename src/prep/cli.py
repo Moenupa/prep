@@ -2,7 +2,14 @@ from pathlib import Path
 
 import typer
 
-from .api import FormatterPipeline, OutputActions, PathIO, ProcArgs, get_valid_formats
+from .api import (
+    FormatterPipeline,
+    OutputActions,
+    PathIO,
+    ProcArgs,
+    get_valid_formats,
+    list_transform_names,
+)
 from .api.types import _DataFormat, _Split
 from .constants import (
     DEFAULT_ACOLS,
@@ -73,6 +80,12 @@ def prep(
         default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
     ),
     labels: list[str] = typer.Option(default=[], envvar="LABELS", rich_help_panel=_CLS),
+    transforms: list[str] = typer.Option(
+        default=[],
+        envvar="TRANSFORMS",
+        rich_help_panel=_CLS,
+        help=f"Image transforms applied in order. Available: {list_transform_names()}",
+    ),
     interactive: bool = typer.Option(
         False,
         envvar="UI",
@@ -95,6 +108,7 @@ def prep(
             answer_cols=a_cols,
             answer_template=a_template,
             labels=labels,
+            transforms=transforms,
             verl_ability=verl_ability,
             verl_style=verl_style,
             show_first_n=head,

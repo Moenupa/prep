@@ -96,6 +96,24 @@ Shared extraction logic supports these input patterns:
 
 When options exist and the answer is an integer label, the mapper converts it to `A`, `B`, `C`, and so on.
 
+## Image Transforms
+
+`prep` ships a registry of image-to-image transforms, currently applied during
+`cls` (classification) conversion by the `auto_cls` pipeline.
+
+Enable them with the `--transforms` option (or the `TRANSFORMS` env var),
+passing one or more transform names applied in order:
+
+```sh
+prep cls auto train path/to/data --labels 'cat dog' --transforms crop_black_border
+```
+
+Built-in transforms:
+
+- `crop_black_border`: crops away borders of black or near-black pixels
+  (all channels at or below 10).
+- `crop_black_columns`: keeps the longest horizontal run of non-black columns.
+
 ## Output Schemas
 
 `sft` produces records shaped like:

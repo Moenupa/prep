@@ -19,6 +19,7 @@ uv run pytest /path/to/test_file.py # Run specific test files
 - `prep` -> `src/prep/cli.py:prep()` --- convert dataset to target format.
 - `ppls` -> `src/prep/cli.py:ppls()` --- list pipelines and local output status.
 - `src/prep/formatter/` --- dataset-specific pipeline definitions; `auto_*.py` for generic pipelines.
+- `src/prep/transform/` --- image-to-image transforms registered with `@transform(...)`.
 - Runtime: resolve `FormatterPipeline` -> load data and format -> cast schema -> validate -> preview -> save.
 - `ProcArgs` holds column names and templates. Outputs go to `out/<format>/<pipeline_id>/<split>`.
 

@@ -2,7 +2,10 @@ import logging
 
 from rich.logging import RichHandler
 
-from . import formatter  # noqa: F401 # trigger formatter registration
+from . import (
+    formatter,  # noqa: F401 # trigger formatter registration
+    transform,  # noqa: F401 # trigger transform registration
+)
 
 logging.basicConfig(
     format="%(message)s",
