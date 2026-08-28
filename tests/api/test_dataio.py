@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import pytest
-
 from datasets import Dataset, DatasetDict
 
 from prep.api.dataio import (
@@ -13,8 +12,8 @@ from prep.api.dataio import (
     resolve_remote,
     resolve_split,
 )
-from prep.api.types import ProcArgs
 from prep.api.formatter import FormatterPipeline
+from prep.api.types import ProcArgs
 
 
 def test_status_dicts_reports_registered_and_unregistered_datasets(
@@ -109,31 +108,40 @@ class TestResolveRemote:
             resolve_remote(remote)
 
 
-@pytest.mark.parametrize(
-    ("requested", "available", "expected"),
-    [(None, ["train"], "train"), ("test", ["train", "test"], "test"), ("val", ["validation"], "validation")],
-)
-def test_resolve_split_accepts_single_direct_and_validation_alias(
-    requested: str | None, available: list[str], expected: str
-) -> None:
-    assert resolve_split(requested, available) == expected
+class TestResolveSplit:
+    @pytest.mark.parametrize(
+        ("requested", "available", "expected"),
+        [
+            (None, ["train"], "train"),
+            ("test", ["train", "test"], "test"),
+            ("val", ["validation"], "validation"),
+        ],
+    )
+    def test_accepts_single_direct_and_validation_alias(
+        self, requested: str | None, available: list[str], expected: str
+    ) -> None:
+        assert resolve_split(requested, available) == expected
 
-
-def test_resolve_split_rejects_ambiguous_or_missing_splits() -> None:
-    with pytest.raises(ValueError, match="must be specified"):
-        resolve_split(None, ["train", "test"])
-    with pytest.raises(ValueError, match="not found"):
-        resolve_split("dev", ["train"])
+    def test_rejects_ambiguous_or_missing_splits(self) -> None:
+        with pytest.raises(ValueError, match="must be specified"):
+            resolve_split(None, ["train", "test"])
+        with pytest.raises(ValueError, match="not found"):
+            resolve_split("dev", ["train"])
 
 
 def test_load_local_handles_dataset_dict_and_unloadable_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     dataset = Dataset.from_dict({"value": [1]})
-    monkeypatch.setattr("prep.api.dataio.load_from_disk", lambda _: DatasetDict(train=dataset))
+    monkeypatch.setattr(
+        "prep.api.dataio.load_from_disk", lambda _: DatasetDict({"train": dataset})
+    )
     assert load_local("ignored", "train") == dataset
 
-    monkeypatch.setattr("prep.api.dataio.load_from_disk", lambda _: (_ for _ in ()).throw(OSError("bad")))
+    monkeypatch.setattr(
+        "prep.api.dataio.load_from_disk",
+        lambda _: (_ for _ in ()).throw(OSError("bad")),
+    )
     assert load_local("ignored") is None
 
 
@@ -142,14 +150,20 @@ def test_load_remote_parses_source_and_passes_processing_options(
 ) -> None:
     expected = Dataset.from_dict({"value": [1]})
     calls: dict[str, object] = {}
-    monkeypatch.setattr("prep.api.dataio.get_dataset_split_names", lambda *_: ["validation"])
+    monkeypatch.setattr(
+        "prep.api.dataio.get_dataset_split_names", lambda *_: ["validation"]
+    )
     monkeypatch.setattr(
         "prep.api.dataio.load_dataset",
         lambda *args, **kwargs: calls.update(args=args, **kwargs) or expected,
     )
 
     assert load_remote("org/data@subset:val", args=ProcArgs(num_proc=2)) == expected
-    assert calls == {"args": ("org/data", "subset"), "split": "validation", "num_proc": 2}
+    assert calls == {
+        "args": ("org/data", "subset"),
+        "split": "validation",
+        "num_proc": 2,
+    }
 
 
 def test_adaptive_load_dataset_loads_files_and_applies_sampling(
@@ -181,7 +195,9 @@ def test_adaptive_load_dataset_requires_remote_split_and_falls_back_to_remote(
 
 def test_pathio_helpers_and_tables(tmp_path: Path) -> None:
     dataset_dir = tmp_path / "sft" / "demo"
-    assert PathIO.dataset_path(dataset_dir, "train", True) == dataset_dir / "train.parquet"
+    assert (
+        PathIO.dataset_path(dataset_dir, "train", True) == dataset_dir / "train.parquet"
+    )
     assert PathIO.dataset_path(dataset_dir, "train", False) == dataset_dir / "train"
     assert not PathIO.is_overwrite(dataset_dir)
     dataset_dir.mkdir(parents=True)
@@ -191,30 +207,50 @@ def test_pathio_helpers_and_tables(tmp_path: Path) -> None:
     assert PathIO.size(dataset_dir) == "4 bytes"
 
 
-def test_output_actions_save_and_upload_obey_flags_and_dry_run(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    dataset = Dataset.from_dict({"value": [1]})
-    pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-    action = OutputActions(tmp_path, True, False, True, "org/repo", None, True)
-    save_calls: list[object] = []
-    upload_calls: list[tuple[tuple, dict]] = []
-    monkeypatch.setattr(dataset, "save_to_disk", lambda *args, **kwargs: save_calls.append((args, kwargs)))
-    monkeypatch.setattr(dataset, "push_to_hub", lambda *args, **kwargs: upload_calls.append((args, kwargs)))
+class TestOutputActions:
+    def test_save_and_upload_obey_flags_and_dry_run(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        dataset = Dataset.from_dict({"value": [1]})
+        pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
+        action = OutputActions(tmp_path, True, False, True, "org/repo", None, True)
+        save_calls: list[object] = []
+        upload_calls: list[tuple[tuple, dict]] = []
+        monkeypatch.setattr(
+            dataset,
+            "save_to_disk",
+            lambda *args, **kwargs: save_calls.append((args, kwargs)),
+        )
+        monkeypatch.setattr(
+            dataset,
+            "push_to_hub",
+            lambda *args, **kwargs: upload_calls.append((args, kwargs)),
+        )
 
-    action.do_save(dataset, pipeline, nproc=2, dry_run=True)
-    action.do_save(dataset, pipeline, nproc=2)
-    action.do_upload(dataset, "val", nproc=2, dry_run=True)
-    action.do_upload(dataset, "val", nproc=2)
+        action.do_save(dataset, pipeline, nproc=2, dry_run=True)
+        action.do_save(dataset, pipeline, nproc=2)
+        action.do_upload(dataset, "val", nproc=2, dry_run=True)
+        action.do_upload(dataset, "val", nproc=2)
 
-    assert save_calls == [((tmp_path / "sft" / "demo" / "train",), {"num_proc": 2})]
-    assert upload_calls == [(("org/repo",), {"config_name": "default", "split": "validation", "private": True, "num_proc": 2})]
+        assert save_calls == [((tmp_path / "sft" / "demo" / "train",), {"num_proc": 2})]
+        assert upload_calls == [
+            (
+                ("org/repo",),
+                {
+                    "config_name": "default",
+                    "split": "validation",
+                    "private": True,
+                    "num_proc": 2,
+                },
+            )
+        ]
 
-
-def test_output_actions_skip_non_interactive_operations(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
-    dataset = Dataset.from_dict({"value": [1]})
-    pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-    action = OutputActions(tmp_path, None, False, None, "org/repo", None, False)
-    action.do_save(dataset, pipeline)
-    action.do_upload(dataset, "train")
-    assert "Skipping (non-interactive mode)" in capsys.readouterr().out
+    def test_output_actions_skip_non_interactive_operations(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        dataset = Dataset.from_dict({"value": [1]})
+        pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
+        action = OutputActions(tmp_path, None, False, None, "org/repo", None, False)
+        action.do_save(dataset, pipeline)
+        action.do_upload(dataset, "train")
+        assert "Skipping (non-interactive mode)" in capsys.readouterr().out

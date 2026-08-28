@@ -33,7 +33,11 @@ def test_formatter_get_falls_back_to_auto_for_unknown_pipeline(
 
 def test_formatter_get_returns_show_pipeline_regardless_of_id() -> None:
     pipeline = FormatterPipeline.get("anything", "show", "test")
-    assert (pipeline.id_, pipeline.target_format, pipeline.split) == ("_", "show", "test")
+    assert (pipeline.id_, pipeline.target_format, pipeline.split) == (
+        "_",
+        "show",
+        "test",
+    )
 
 
 def test_formatter_pipeline_load_handles_cast_and_validation_failures(
@@ -41,8 +45,16 @@ def test_formatter_pipeline_load_handles_cast_and_validation_failures(
 ) -> None:
     dataset = Dataset.from_dict({"value": [1]})
     pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-    monkeypatch.setattr(FormatterPipeline, "cast_dataset", staticmethod(lambda *_: (_ for _ in ()).throw(ValueError("cast"))))
-    monkeypatch.setattr(FormatterPipeline, "check_sample", lambda *_: (_ for _ in ()).throw(ValueError("check")))
+    monkeypatch.setattr(
+        FormatterPipeline,
+        "cast_dataset",
+        staticmethod(lambda *_: (_ for _ in ()).throw(ValueError("cast"))),
+    )
+    monkeypatch.setattr(
+        FormatterPipeline,
+        "check_sample",
+        lambda *_: (_ for _ in ()).throw(ValueError("check")),
+    )
     peeked: list[Dataset] = []
     monkeypatch.setattr(ProcArgs, "peek", lambda _self, d: peeked.append(d))
 
@@ -51,7 +63,9 @@ def test_formatter_pipeline_load_handles_cast_and_validation_failures(
 
 
 def test_formatter_pipeline_load_requires_source(procargs: ProcArgs) -> None:
-    pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: Dataset.from_dict({}))
+    pipeline = FormatterPipeline(
+        "demo", "sft", "train", lambda *_: Dataset.from_dict({})
+    )
     with pytest.raises(ValueError, match="no local/remote source"):
         pipeline.load(None, procargs)
 

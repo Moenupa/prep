@@ -33,15 +33,25 @@ def test_validate_image_tags() -> None:
 def test_validation_handles_rich_content_and_numbered_image_tags() -> None:
     messages = [
         {"role": "assistant", "content": "ignored"},
-        {"role": "user", "content": [{"text": "<image 01><image 2> Answer in \\boxed{}"}, {"type": "image"}]},
+        {
+            "role": "user",
+            "content": [
+                {"text": "<image 01><image 2> Answer in \\boxed{}"},
+                {"type": "image"},
+            ],
+        },
     ]
-    assert list(iter_user_content(messages)) == ["<image 01><image 2> Answer in \\boxed{}"]
+    assert list(iter_user_content(messages)) == [
+        "<image 01><image 2> Answer in \\boxed{}"
+    ]
     assert count_img_tags(messages[1]["content"][0]["text"]) == 2
     validate_image_tags(messages, expected_n_img=2)
     validate_answer_formatting(messages)
 
 
-def test_validation_skips_missing_expected_images_and_warns_without_formatting_hint() -> None:
+def test_validation_skips_missing_expected_images_and_warns_without_formatting_hint() -> (
+    None
+):
     validate_image_tags([{"role": "user", "content": "plain"}])
     with pytest.raises(SyntaxWarning, match="No formatting hints"):
         validate_answer_formatting([{"role": "user", "content": "plain"}])
