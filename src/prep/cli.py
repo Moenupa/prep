@@ -16,6 +16,7 @@ _INTERACTIVE = "Interactive Options"
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
 _AUTO = "Auto Conversion Options"
+_CLS = "CLS Conversion Options"
 app = typer.Typer()
 
 
@@ -29,6 +30,11 @@ def prep(
     head: int = typer.Option(3, envvar="HEAD", help="Preview first n samples."),
     tail: int = typer.Option(0, envvar="TAIL", help="Preview last n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
+    seed: int | None = typer.Option(
+        None,
+        envvar="SEED",
+        help="Seed for shuffling. None disables shuffling; negative for random; non-negative for fixed seed.",
+    ),
     save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
     save_root: Path = typer.Option(
         Path("out"), envvar="SAVE_DIR", rich_help_panel=_SAVE
@@ -60,15 +66,13 @@ def prep(
     a_template: str = typer.Option(
         default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
     ),
-    labels: list[str] = typer.Option(
-        default=[], envvar="LABELS", rich_help_panel=_AUTO
-    ),
     verl_ability: str = typer.Option(
         default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
     ),
     verl_style: str = typer.Option(
         default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
     ),
+    labels: list[str] = typer.Option(default=[], envvar="LABELS", rich_help_panel=_CLS),
     interactive: bool = typer.Option(
         False,
         envvar="UI",
@@ -96,6 +100,7 @@ def prep(
             show_first_n=head,
             show_last_n=tail,
             max_samples=max_samples,
+            seed=seed,
         ),
     )
     action = OutputActions(
