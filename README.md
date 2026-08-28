@@ -120,13 +120,13 @@ Built-in transforms:
 
 ```python
 {
-	"images": list[Image],
-	"messages": [
-		{"role": "user", "content": str},
-		{"role": "assistant", "content": str},
-	],
-	"id": str,
-	"extra_info": str,
+    "images": list[Image],
+    "messages": [
+        {"role": "user", "content": str},
+        {"role": "assistant", "content": str},
+    ],
+    "id": str,
+    "extra_info": str,
 }
 ```
 
@@ -134,17 +134,17 @@ Built-in transforms:
 
 ```python
 {
-	"images": list[Image],
-	"data_source": str,
-	"prompt": [{"role": "user", "content": str}],
-	"ability": str,
-	"reward_model": {"style": str, "ground_truth": str},
-	"extra_info": {
-		"split": str,
-		"index": str,
-		"explanation": str,
-		"misc": str,
-	},
+    "images": list[Image],
+    "data_source": str,
+    "prompt": [{"role": "user", "content": str}],
+    "ability": str,
+    "reward_model": {"style": str, "ground_truth": str},
+    "extra_info": {
+        "split": str,
+        "index": str,
+        "explanation": str,
+        "misc": str,
+    },
 }
 ```
 
@@ -152,11 +152,11 @@ Built-in transforms:
 
 ```python
 {
-	"id": str,
-	"images": list[Image],
-	"question": str,
-	"options": list[str],
-	"answer": str,
+    "id": str,
+    "images": list[Image],
+    "question": str,
+    "options": list[str],
+    "answer": str,
 }
 ```
 
@@ -202,8 +202,8 @@ from prep.api import ProcArgs, adaptive_load_dataset, formatter
 
 @formatter("my-dataset", "sft", "train", default_src="org/my-dataset")
 def load(path: str, split: str, args: ProcArgs):
-	d = adaptive_load_dataset(path, split=split, nproc=args.num_proc)
-	return d.map(...)
+    d = adaptive_load_dataset(path, split=split, nproc=args.num_proc)
+    return d.map(...)
 ```
 
 Notes:

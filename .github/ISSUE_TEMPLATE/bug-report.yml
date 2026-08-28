@@ -20,7 +20,7 @@ body:
     id: information-scripts-examples
     attributes:
       label: Information
-      description: 'The problem arises when during:'
+      description: 'Which area does the problem relate to?'
       options:
         - label: "prep CLI conversion"
         - label: "ppls pipeline listing or output status"
