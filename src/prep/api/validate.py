@@ -1,3 +1,4 @@
+import re
 from collections.abc import Generator
 
 from openai._models import validate_type
@@ -69,7 +70,7 @@ def validate_answer_formatting(
 
 
 def count_img_tags(text: str) -> int:
-    if "<image 1>" in text or "<image 01>" in text:
+    if re.search(r"<image\s+\d{1,2}>", text):
         # support <image 01> and <image 1> tags, 1-99 tags
         # if it goes beyond that, use <image> instead.
         # do not use .count() because it measures multiple occurrences of the same tag
