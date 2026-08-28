@@ -164,7 +164,7 @@ The CLI also exposes Hugging Face upload options such as `--hf`, `--hf-repo`, `-
 
 ## Diagnostics
 
-`prep show ...` is useful when a dataset fails during lazy image decoding or contains problematic files. In normal mode it runs a no-op `filter(...)` pass to force reads. If the environment variable `SLOW_PASS=1` is set, it iterates in chunks and prints the exact failing indices with warnings or errors.
+`prep show ...` is useful when a dataset fails during lazy image decoding or contains problematic samples. It iterates through the dataset and prints the exact failing indices with warnings or errors.
 
 The pipeline layer also validates:
 
