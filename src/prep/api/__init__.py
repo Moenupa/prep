@@ -1,5 +1,6 @@
-from .dataio import OutputActions, PathIO, adaptive_load_dataset
+from .dataio import OutputActions, PathIO
 from .formatter import FormatterPipeline, LoadFn, formatter
+from .load import adaptive_load_dataset
 from .log import get_logger
 from .transform import (
     ImageTransform,

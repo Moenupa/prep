@@ -1,173 +1,78 @@
-import re
+import shutil
 from collections import defaultdict
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
+import filetype
+import typer
 from datasets import (
     Dataset,
-    DatasetDict,
     get_dataset_config_names,
     get_dataset_split_names,
-    load_dataset,
-    load_from_disk,
 )
 from huggingface_hub import HfApi
+from PIL import Image as PILImage
 from rich.filesize import decimal
 from rich.table import Table
 
-from ..constants import HF_PREFIX, SAVE_PREFIX, SKIP
+from ..constants import HF_PREFIX, PREVIEW_PREFIX, SAVE_PREFIX, SKIP, WARN_PREFIX
 from .formatter import FormatterPipeline, get_registered_pipelines
+from .formatutils import iter_images
 from .log import get_logger
-from .types import DataFormat, ProcArgs, Split, get_valid_formats, get_valid_splits
+from .types import DataFormat, Split, get_valid_formats, get_valid_splits
 
 if TYPE_CHECKING:
     from collections.abc import Generator
 
+
 logger = get_logger(__name__)
 
-_FORMATS = {
-    ".parquet": "parquet",
-    ".pq": "parquet",
-    ".json": "json",
-    ".jsonl": "json",
-    ".ndjson": "json",
-    ".csv": "csv",
-    ".tsv": "csv",
-    ".arrow": "arrow",
-    ".txt": "text",
-    ".text": "text",
-}
+
+def guess_ext(raw: bytes, src_path: str | None) -> str:
+    ext = filetype.guess_extension(raw)
+    if ext is None and src_path is not None:
+        ext = Path(src_path).suffix.lower().lstrip(".")
+    if ext is None:
+        raise ValueError("Cannot guess file extension from raw bytes or source path")
+
+    return ext
 
 
-def resolve_remote(source: str) -> tuple[str, str | None, str | None]:
-    """Resolve a remote dataset source into its components.
-
-    Args:
-        source (str): dataset ID in the format of `org/data[@subset][:split]`.
-
-    Returns:
-        tuple[str, str | None, str | None]: A tuple containing the source, subset, and split.
-    """
-    match = re.match(
-        r"^(?P<source>[^@]+)(?:@(?P<subset>[^:]+))?(?::(?P<split>.+))?$", source
-    )
-    if not match:
-        raise ValueError(f"Invalid source format: {source!r}")
-
-    return (
-        match.group("source"),
-        match.group("subset"),
-        match.group("split"),
-    )
-
-
-def resolve_split(split: str | None, available: list[str]) -> str:
-    if split is None:
-        if len(available) == 1:
-            return available[0]
-        raise ValueError(
-            f"Split must be specified for dataset with multiple splits: {available}"
-        )
-
-    # direct hit is preferred
-    if split in available:
-        return split
-
-    # translate if "val" -> "validation" if exists
-    # we want to be generous here to facilitate IO
-    if split == "val" and "validation" in available:
-        return "validation"
-
-    raise ValueError(f"Split {split!r} not found in dataset: {available}")
-
-
-def load_local(source: str, split: str | None = None) -> Dataset | None:
-    logger.debug(f"Loading dataset from local disk: {source} (split={split})")
+def _write_preview_image(entry: Any, dest: Path) -> Path | None:
     try:
-        d = load_from_disk(source)
-    except Exception:
-        return None
+        if isinstance(entry, PILImage.Image):
+            ext = (entry.format or "PNG").lower()
+            if ext == "jpeg":
+                ext = "jpg"
+            img = entry
+            if ext == "jpg" and img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            out = dest.with_suffix(f".{ext}")
+            img.save(out)
+            return out
 
-    if isinstance(d, Dataset):
-        return d
+        if isinstance(entry, dict):
+            raw, src_path = entry.get("bytes"), entry.get("path")
+            if raw:
+                out = dest.with_suffix(f".{guess_ext(raw, src_path)}")
+                out.write_bytes(raw)
+                return out
+            if src_path and Path(src_path).exists():
+                src = Path(src_path)
+                out = dest.with_suffix(src.suffix.lower())
+                shutil.copyfile(src, out)
+                return out
 
-    if not isinstance(d, DatasetDict):
-        raise RuntimeError(f"Unexpected dataset type: {type(d)} {d}")
-
-    return d[resolve_split(split, list(map(str, d.keys())))]
-
-
-def load_remote(
-    source: str, split: str | None = None, args: ProcArgs | None = None
-) -> Dataset:
-    """Load a dataset from Hugging Face Hub.
-
-    Args:
-        source (str): dataset ID in the format of `org/data[@subset][:split]`.
-        split (str | None, optional): dataset split name. Defaults to None.
-        args (ProcArgs | None, optional): processing arguments. Defaults to None.
-
-    Returns:
-        Dataset: the loaded dataset.
-    """
-    logger.debug(f"Loading dataset from Hugging Face Hub: {source} (split={split})")
-    source, subset, override_split = resolve_remote(source)
-
-    d = load_dataset(
-        source,
-        subset,
-        split=resolve_split(
-            override_split or split, get_dataset_split_names(source, subset)
-        ),
-        num_proc=None if args is None else args.num_proc,
-    )
-    return d
-
-
-def load_file(path: Path) -> Dataset:
-    logger.debug(f"Loading dataset from file: {path}")
-    if path.suffix not in _FORMATS:
-        raise ValueError(f"Unsupported file format: {path.suffix!r}")
-
-    return load_dataset(_FORMATS[path.suffix], data_files=[str(path)], split="train")
-
-
-def adaptive_load_dataset(
-    source: str,
-    split: str | None = None,
-    args: ProcArgs | None = None,
-) -> Dataset:
-    path = Path(source)
-
-    d = None
-
-    # non-local -> HF remote
-    if not path.exists():
-        if split is None:
-            raise ValueError("Split must be specified for remote datasets.")
-        d = load_remote(source, split, args)
-
-    # local -> 1. dir 2. file
-    elif path.is_dir():
-        d = load_local(source, split)
-        # try to load from locally hf-downloaded datasets
-        if d is None and split is not None:
-            d = load_remote(source, split, args)
-
-    elif path.is_file():
-        d = load_file(path)
-
-    if d is None:
-        raise ValueError(f"Failed to load dataset: source={source!r}, split={split!r}")
-
-    # not randomly shuffled
-    if args is not None and args.seed is not None:
-        d = d.shuffle(seed=None if args.seed < 0 else args.seed)
-    if args is not None and args.max_samples is not None:
-        d = d.select(range(min(args.max_samples, len(d))))
-    return d
+        if isinstance(entry, (str, Path)) and Path(entry).exists():
+            src = Path(entry)
+            out = dest.with_suffix(src.suffix.lower())
+            shutil.copyfile(src, out)
+            return out
+    except Exception as exc:
+        logger.warning(f"{WARN_PREFIX}Failed to dump preview image: {exc}")
+    return None
 
 
 @dataclass(frozen=True)
@@ -328,12 +233,51 @@ class OutputActions(PathIO):
     hf_repo: str
     hf_subset: str | None
     hf_private: bool
+
+    preview: int | None = None
     interactive: bool = False
+
+    def do_dump(
+        self,
+        d: "Dataset",
+        pipeline: FormatterPipeline,
+        id_override: str | None = None,
+    ) -> None:
+        """Dump images from the first ``self.preview`` rows for visual inspection.
+
+        Since image columns are stored as opaque binary blobs in parquet/arrow
+        outputs, this writes a few representative image files to disk under the
+        default save path so an agent or user can directly inspect them.
+
+        Args:
+            d: The formatted dataset to preview.
+            pipeline: The pipeline used to produce ``d`` (used for the output path).
+            id_override: Overrides the pipeline ID in the output path, mirroring
+                the behavior of ``OutputActions.do_save``.
+        """
+        if self.preview is None or self.preview <= 0:
+            return
+        dump_dir = self.default_save_path(
+            pipeline, as_parquet=False, id_override=id_override
+        )
+        dump_dir.mkdir(parents=True, exist_ok=True)
+
+        for i in range(min(self.preview, len(d))):
+            try:
+                row = d[i]
+            except Exception as exc:
+                logger.warning(
+                    f"{WARN_PREFIX}Failed to load sample {i} for preview: {exc}"
+                )
+                continue
+            for j, img in enumerate(iter_images(row)):
+                dest = dump_dir / f"{i:06d}_{j:02d}"
+                path = _write_preview_image(img, dest)
+                if path is not None:
+                    typer.echo(f"{PREVIEW_PREFIX}Preview image saved: {path}")
 
     @staticmethod
     def _resolve_save_path(save_path: Path) -> Path | None:
-        import typer
-
         def save_target(e: str) -> Path | None:
             if e.strip() == SKIP:
                 return None
@@ -369,8 +313,6 @@ class OutputActions(PathIO):
         id_override: str | None = None,
         dry_run: bool = False,
     ):
-        import typer
-
         save_path = self.default_save_path(
             pipeline, self.save_parquet, id_override=id_override
         )

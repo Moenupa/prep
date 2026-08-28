@@ -1,6 +1,6 @@
 import pytest
 
-from prep.api.formatutils import extract_images
+from prep.api.formatutils import extract_images, iter_images
 
 
 @pytest.mark.parametrize(
@@ -72,3 +72,29 @@ def test_extract_images_handles_priority_and_sequence_boundaries(
     expected: list,
 ) -> None:
     assert extract_images(entry) == expected
+
+
+@pytest.mark.parametrize(
+    ("entry", "expected"),
+    [
+        pytest.param({"image": "a.png"}, ["a.png"], id="single-image"),
+        pytest.param({"images": ["a.png", "b.png"]}, ["a.png", "b.png"], id="images"),
+        pytest.param({"img": "a.png"}, ["a.png"], id="img"),
+        pytest.param(
+            {"image_1": "a.png", "image_2": "b.png", "image_4": "skip.png"},
+            ["a.png", "b.png"],
+            id="numbered-stops-at-gap",
+        ),
+        pytest.param(
+            {"image_01": "a.png", "image_02": "b.png"},
+            ["a.png", "b.png"],
+            id="zero-padded",
+        ),
+        pytest.param({"image": None}, [], id="none-value-yields-nothing"),
+        pytest.param({"question": "q"}, [], id="no-image-field"),
+    ],
+)
+def test_iter_images_yields_entries_across_conventions(
+    entry: dict, expected: list
+) -> None:
+    assert list(iter_images(entry)) == expected

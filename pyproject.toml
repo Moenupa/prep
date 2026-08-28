@@ -18,6 +18,7 @@ dependencies = [
     "datasets[vision]<4.8",
     "typer",
     "openai",
+    "filetype",
 ]
 
 [project.urls]
