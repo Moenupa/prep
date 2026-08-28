@@ -147,7 +147,7 @@ def adaptive_load_dataset(
     if not path.exists():
         if split is None:
             raise ValueError("Split must be specified for remote datasets.")
-        return load_remote(source, split, args)
+        d = load_remote(source, split, args)
 
     # local -> 1. dir 2. file
     elif path.is_dir():
@@ -157,7 +157,7 @@ def adaptive_load_dataset(
             d = load_remote(source, split, args)
 
     elif path.is_file():
-        return load_file(path)
+        d = load_file(path)
 
     if d is None:
         raise ValueError(f"Failed to load dataset: source={source!r}, split={split!r}")
