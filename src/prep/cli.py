@@ -16,7 +16,7 @@ _INTERACTIVE = "Interactive Options"
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
 _AUTO = "Auto Conversion Options"
-_CLS = "cls Conversion Options"
+_CLS = "CLS Conversion Options"
 app = typer.Typer()
 
 
