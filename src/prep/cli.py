@@ -30,6 +30,11 @@ def prep(
     head: int = typer.Option(3, envvar="HEAD", help="Preview first n samples."),
     tail: int = typer.Option(0, envvar="TAIL", help="Preview last n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
+    seed: int | None = typer.Option(
+        None,
+        envvar="SEED",
+        help="Seed for shuffling. None disables shuffling; negative for random; non-negative for fixed seed.",
+    ),
     save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
     save_root: Path = typer.Option(
         Path("out"), envvar="SAVE_DIR", rich_help_panel=_SAVE
@@ -95,6 +100,7 @@ def prep(
             show_first_n=head,
             show_last_n=tail,
             max_samples=max_samples,
+            seed=seed,
         ),
     )
     action = OutputActions(
