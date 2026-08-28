@@ -164,7 +164,7 @@ def adaptive_load_dataset(
 
     # not randomly shuffled
     if args is not None and args.seed is not None:
-        d = d.shuffle(seed=None if args.seed < 0 else args.seed, num_proc=args.num_proc)
+        d = d.shuffle(seed=None if args.seed < 0 else args.seed)
     if args is not None and args.max_samples is not None:
         d = d.select(range(min(args.max_samples, len(d))))
     return d
@@ -421,10 +421,10 @@ class OutputActions(PathIO):
                 repo_id, config_name
             )
         except Exception as exc:
-            logger.warning(
-                f"Unable to inspect HF dataset {repo_id}. Treating as existing."
-            )
             logger.warning(exc)
+            logger.warning(
+                f"Unable to inspect HF repo {repo_id}. Treating as existing."
+            )
             return True
 
     @staticmethod
