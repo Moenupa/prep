@@ -1,12 +1,8 @@
 import warnings
-from functools import partial
 
 from ..api import ProcArgs, adaptive_load_dataset, formatter, get_logger
-from ..constants import is_env_enabled
 
 logger = get_logger(__name__)
-
-SLOW_PASS = is_env_enabled("SLOW_PASS", default="0")
 
 
 def print_if_warn_or_error(start_from: int, *, d, chunksize: int) -> None:
@@ -29,23 +25,22 @@ def print_if_warn_or_error(start_from: int, *, d, chunksize: int) -> None:
 @formatter("_", "show", "test", default_src=None)
 def load(path: str, split: str, args: ProcArgs):
     d = adaptive_load_dataset(path, split=split, args=args)
-    if SLOW_PASS:
-        # if you ever run into errors during the filtering and need to id the example
-        # turn on SLOW_PASS and it will iterate and print buggy examples
-        from tqdm.contrib.concurrent import process_map
+    from functools import partial
 
-        process_map(
-            partial(print_if_warn_or_error, d=d, chunksize=1000),
-            range(0, len(d), 1000),
-            max_workers=args.num_proc,
-            chunksize=1,
-            desc="Checking dataset",
-        )
-    else:
-        # dummy pass to trigger lazy loading & catch errors, e.g., pillow image decoding
-        # such that you can see errors and warnings, e.g., during PILImage decoding:
-        # - `UserWarning: Truncated File Read`
-        # - `SyntaxError: not a TIFF file (header b'\x00\x08\x00\x04\x01\x1a\x00\x05' not valid)`
-        d = d.filter(lambda e: True, num_proc=args.num_proc)
+    from tqdm.contrib.concurrent import process_map
+
+    chunksize = max(1000, len(d) // (args.num_proc * 4))
+    process_map(
+        partial(print_if_warn_or_error, d=d, chunksize=chunksize),
+        range(0, len(d), chunksize),
+        max_workers=args.num_proc,
+        chunksize=1,
+        desc="Checking dataset",
+    )
+    # dummy pass to trigger lazy loading & catch errors, e.g., pillow image decoding
+    # such that you can see errors and warnings, e.g., during PILImage decoding:
+    # - `UserWarning: Truncated File Read`
+    # - `SyntaxError: not a TIFF file (header b'\x00\x08\x00\x04\x01\x1a\x00\x05' not valid)`
+    # d = d.filter(lambda e: True, num_proc=args.num_proc)
 
     return d
