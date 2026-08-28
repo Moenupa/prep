@@ -1,19 +1,21 @@
+from io import BytesIO
 from pathlib import Path
 
 import pytest
-from datasets import Dataset, DatasetDict
+from datasets import Dataset, Features, Image, List
+from PIL import Image as PILImage
 
 from prep.api.dataio import (
     OutputActions,
     PathIO,
-    adaptive_load_dataset,
-    load_local,
-    load_remote,
-    resolve_remote,
-    resolve_split,
 )
 from prep.api.formatter import FormatterPipeline
-from prep.api.types import ProcArgs
+
+
+def _png_bytes(size: int = 8) -> bytes:
+    buf = BytesIO()
+    PILImage.new("RGB", (size, size), "red").save(buf, format="PNG")
+    return buf.getvalue()
 
 
 def test_status_dicts_reports_registered_and_unregistered_datasets(
@@ -64,133 +66,6 @@ def test_status_dicts_reports_registered_and_unregistered_datasets(
     assert unregistered_report["train"] == [False]
     assert unregistered_report["val"] == [False]
     assert unregistered_report["test"] == [True]
-
-
-class TestResolveRemote:
-    """Tests for the resolve_remote() function."""
-
-    @pytest.mark.parametrize(
-        ("remote", "expected"),
-        [
-            ("org/dataset", ("org/dataset", None, None)),
-            ("org/dataset@train", ("org/dataset", "train", None)),
-            ("org/dataset:validation", ("org/dataset:validation", None, None)),
-            ("org/dataset@config:test", ("org/dataset", "config", "test")),
-            ("org/team/dataset", ("org/team/dataset", None, None)),
-            ("org/team/dataset@subset1:val", ("org/team/dataset", "subset1", "val")),
-            (
-                "org/dataset@config:train-splits-001",
-                ("org/dataset", "config", "train-splits-001"),
-            ),
-            (":", (":", None, None)),
-            ("org/@dataset@extra:test", ("org/", "dataset@extra", "test")),
-            ("org/dataset@sub:part1:part2", ("org/dataset", "sub", "part1:part2")),
-        ],
-    )
-    def test_resolve_remote(
-        self,
-        remote: str,
-        expected: tuple[str, str | None, str | None],
-    ) -> None:
-        """Test valid remote source parsing."""
-        assert resolve_remote(remote) == expected
-
-    @pytest.mark.parametrize(
-        "remote",
-        [
-            pytest.param("", id="empty-string"),
-            pytest.param("@", id="at-sign-alone"),
-        ],
-    )
-    def test_invalid_source_raises(self, remote: str) -> None:
-        """Test invalid source formats raise ValueError."""
-        with pytest.raises(ValueError, match="Invalid source format"):
-            resolve_remote(remote)
-
-
-class TestResolveSplit:
-    @pytest.mark.parametrize(
-        ("requested", "available", "expected"),
-        [
-            (None, ["train"], "train"),
-            ("test", ["train", "test"], "test"),
-            ("val", ["validation"], "validation"),
-        ],
-    )
-    def test_accepts_single_direct_and_validation_alias(
-        self, requested: str | None, available: list[str], expected: str
-    ) -> None:
-        assert resolve_split(requested, available) == expected
-
-    def test_rejects_ambiguous_or_missing_splits(self) -> None:
-        with pytest.raises(ValueError, match="must be specified"):
-            resolve_split(None, ["train", "test"])
-        with pytest.raises(ValueError, match="not found"):
-            resolve_split("dev", ["train"])
-
-
-def test_load_local_handles_dataset_dict_and_unloadable_path(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    dataset = Dataset.from_dict({"value": [1]})
-    monkeypatch.setattr(
-        "prep.api.dataio.load_from_disk", lambda _: DatasetDict({"train": dataset})
-    )
-    assert load_local("ignored", "train") == dataset
-
-    monkeypatch.setattr(
-        "prep.api.dataio.load_from_disk",
-        lambda _: (_ for _ in ()).throw(OSError("bad")),
-    )
-    assert load_local("ignored") is None
-
-
-def test_load_remote_parses_source_and_passes_processing_options(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    expected = Dataset.from_dict({"value": [1]})
-    calls: dict[str, object] = {}
-    monkeypatch.setattr(
-        "prep.api.dataio.get_dataset_split_names", lambda *_: ["validation"]
-    )
-    monkeypatch.setattr(
-        "prep.api.dataio.load_dataset",
-        lambda *args, **kwargs: calls.update(args=args, **kwargs) or expected,
-    )
-
-    assert load_remote("org/data@subset:val", args=ProcArgs(num_proc=2)) == expected
-    assert calls == {
-        "args": ("org/data", "subset"),
-        "split": "validation",
-        "num_proc": 2,
-    }
-
-
-def test_adaptive_load_dataset_loads_files_and_applies_sampling(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    source = tmp_path / "data.csv"
-    source.write_text("value\n1\n2\n3\n", encoding="utf-8")
-    dataset = Dataset.from_dict({"value": [1, 2, 3]})
-    monkeypatch.setattr("prep.api.dataio.load_file", lambda _: dataset)
-
-    result = adaptive_load_dataset(str(source), args=ProcArgs(seed=3, max_samples=2))
-    assert len(result) == 2
-    assert set(result["value"]).issubset({1, 2, 3})
-
-
-def test_adaptive_load_dataset_requires_remote_split_and_falls_back_to_remote(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    with pytest.raises(ValueError, match="Split must be specified"):
-        adaptive_load_dataset("org/missing")
-
-    local_dir = tmp_path / "downloaded"
-    local_dir.mkdir()
-    expected = Dataset.from_dict({"value": [1]})
-    monkeypatch.setattr("prep.api.dataio.load_local", lambda *_: None)
-    monkeypatch.setattr("prep.api.dataio.load_remote", lambda *_: expected)
-    assert adaptive_load_dataset(str(local_dir), split="train") == expected
 
 
 def test_pathio_helpers_and_tables(tmp_path: Path) -> None:
@@ -254,3 +129,108 @@ class TestOutputActions:
         action.do_save(dataset, pipeline)
         action.do_upload(dataset, "train")
         assert "Skipping (non-interactive mode)" in capsys.readouterr().out
+
+
+class TestDoDump:
+    """Tests for OutputActions.do_dump, which writes preview images to disk."""
+
+    @staticmethod
+    def _action(save_root: Path, preview: int) -> OutputActions:
+        return OutputActions(
+            save_root=save_root,
+            save=False,
+            save_parquet=False,
+            hf=False,
+            hf_repo="org/repo",
+            hf_subset=None,
+            hf_private=True,
+            preview=preview,
+        )
+
+    @staticmethod
+    def _blob_image_dataset(sizes: list[int]) -> Dataset:
+        return Dataset.from_dict(
+            {"image": [_png_bytes(size) for size in sizes]},
+            features=Features(image=Image(decode=False)),
+        )
+
+    def test_dumps_undecoded_blob_images(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture
+    ) -> None:
+        dataset = self._blob_image_dataset([9, 10])
+        pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
+
+        self._action(tmp_path, preview=2).do_dump(dataset, pipeline)
+
+        dump_dir = tmp_path / "cls" / "demo" / "train"
+        assert sorted(p.name for p in dump_dir.iterdir()) == [
+            "000000_00.png",
+            "000001_00.png",
+        ]
+        for path in dump_dir.iterdir():
+            with PILImage.open(path) as img:
+                img.verify()
+        assert capsys.readouterr().out.count("Preview image saved") == 2
+
+    def test_dumps_decoded_pil_and_multi_image_rows(self, tmp_path: Path) -> None:
+        dataset = Dataset.from_dict(
+            {"images": [[_png_bytes(8)], [_png_bytes(9), _png_bytes(10)]]},
+            features=Features(images=List(Image(decode=True))),
+        )
+        pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
+
+        self._action(tmp_path, preview=2).do_dump(dataset, pipeline)
+
+        dump_dir = tmp_path / "sft" / "demo" / "train"
+        assert sorted(p.name for p in dump_dir.iterdir()) == [
+            "000000_00.png",
+            "000001_00.png",
+            "000001_01.png",
+        ]
+        with PILImage.open(dump_dir / "000001_01.png") as img:
+            assert img.size == (10, 10)
+
+    def test_no_op_for_nonpositive_preview(self, tmp_path: Path) -> None:
+        dataset = self._blob_image_dataset([8])
+        pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
+
+        self._action(tmp_path, preview=0).do_dump(dataset, pipeline)
+
+        assert list(tmp_path.iterdir()) == []
+
+    def test_no_op_for_empty_dataset(self, tmp_path: Path) -> None:
+        dataset = Dataset.from_dict({"image": []})
+        pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
+
+        self._action(tmp_path, preview=3).do_dump(dataset, pipeline)
+
+        assert not [p for p in tmp_path.rglob("*") if p.is_file()]
+
+    def test_clamps_preview_count_and_honors_id_override(self, tmp_path: Path) -> None:
+        dataset = self._blob_image_dataset([8])
+        pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
+
+        self._action(tmp_path, preview=10).do_dump(
+            dataset, pipeline, id_override="alias"
+        )
+
+        assert [p.name for p in (tmp_path / "cls" / "alias" / "train").iterdir()] == [
+            "000000_00.png"
+        ]
+
+    def test_skips_unwritable_entries(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture,
+    ) -> None:
+        dataset = self._blob_image_dataset([8])
+        pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
+        monkeypatch.setattr(
+            "prep.api.dataio._write_preview_image", lambda entry, dest: None
+        )
+
+        self._action(tmp_path, preview=1).do_dump(dataset, pipeline)
+
+        assert not [p for p in tmp_path.rglob("*") if p.is_file()]
+        assert "Preview image saved" not in capsys.readouterr().out

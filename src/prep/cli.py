@@ -50,6 +50,12 @@ def prep(
     save_nproc: int | None = typer.Option(
         None, envvar="SAVE_NPROC", rich_help_panel=_SAVE
     ),
+    save_preview: int = typer.Option(
+        0,
+        envvar="SAVE_PREVIEW",
+        rich_help_panel=_SAVE,
+        help="Save images from the first N samples for inspection.",
+    ),
     hf: bool | None = typer.Option(None, envvar="HF", rich_help_panel=_HF),
     hf_repo: str | None = typer.Option(None, envvar="HF_REPO", rich_help_panel=_HF),
     hf_subset: str | None = typer.Option(None, envvar="HF_SUBSET", rich_help_panel=_HF),
@@ -125,8 +131,10 @@ def prep(
         hf_repo=hf_repo or pipeline_id,
         hf_subset=hf_subset,
         hf_private=hf_private,
+        preview=save_preview,
         interactive=interactive,
     )
+    action.do_dump(d, pipeline=pipeline, id_override=pipeline_id)
     action.do_save(d, pipeline=pipeline, nproc=save_nproc, id_override=pipeline_id)
     action.do_upload(d, split=pipeline.split, nproc=hf_nproc)
 

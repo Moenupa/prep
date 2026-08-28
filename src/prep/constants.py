@@ -25,6 +25,7 @@ ID_PATTERN = re.compile(r"^[a-zA-Z0-9\._-]+$")
 
 SAVE_PREFIX = "💾\t"
 HF_PREFIX = "☁️\t"
+PREVIEW_PREFIX = "🖼️\t"
 SKIP = "SKIP"
 
 WARN_PREFIX = "⚠️\t"
