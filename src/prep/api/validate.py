@@ -74,9 +74,10 @@ def count_img_tags(text: str) -> int:
         # support <image 01> and <image 1> tags, 1-99 tags
         # if it goes beyond that, use <image> instead.
         # do not use .count() because it measures multiple occurrences of the same tag
-        return sum(
-            (f"<image {i:02d}>" in text) or (f"<image {i}>" in text)
+        return max(
+            i
             for i in range(1, 100)
+            if (f"<image {i:02d}>" in text) or (f"<image {i}>" in text)
         )
 
     return text.count(IMAGE_TAG)
