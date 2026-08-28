@@ -56,6 +56,9 @@ class ProcArgs:
     show_last_n: int = 0
     max_samples: int | None = None
 
+    # None for no shuffling, negative for random seed, non-negative for fixed seed
+    seed: int | None = None
+
     def __post_init__(self):
         if self.num_proc <= 0:
             raise ValueError(f"Invalid num_proc: {self.num_proc}")

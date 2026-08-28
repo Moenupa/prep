@@ -84,6 +84,7 @@ def resolve_split(split: str | None, available: list[str]) -> str:
 
 
 def load_local(source: str, split: str | None = None) -> Dataset | None:
+    logger.debug(f"Loading dataset from local disk: {source} (split={split})")
     try:
         d = load_from_disk(source)
     except Exception:
@@ -111,6 +112,7 @@ def load_remote(
     Returns:
         Dataset: the loaded dataset.
     """
+    logger.debug(f"Loading dataset from Hugging Face Hub: {source} (split={split})")
     source, subset, override_split = resolve_remote(source)
 
     d = load_dataset(
@@ -122,6 +124,14 @@ def load_remote(
         num_proc=None if args is None else args.num_proc,
     )
     return d
+
+
+def load_file(path: Path) -> Dataset:
+    logger.debug(f"Loading dataset from file: {path}")
+    if path.suffix not in _FORMATS:
+        raise ValueError(f"Unsupported file format: {path.suffix!r}")
+
+    return load_dataset(_FORMATS[path.suffix], data_files=[str(path)], split="train")
 
 
 def adaptive_load_dataset(
@@ -147,15 +157,14 @@ def adaptive_load_dataset(
             d = load_remote(source, split, args)
 
     elif path.is_file():
-        if path.suffix not in _FORMATS:
-            raise ValueError(f"Unsupported file format: {path.suffix!r}")
-
-        d = load_dataset(_FORMATS[path.suffix], data_files=[source], split="train")
+        return load_file(path)
 
     if d is None:
         raise ValueError(f"Failed to load dataset: source={source!r}, split={split!r}")
 
     # not randomly shuffled
+    if args is not None and args.seed is not None:
+        d = d.shuffle(seed=None if args.seed < 0 else args.seed, num_proc=args.num_proc)
     if args is not None and args.max_samples is not None:
         d = d.select(range(min(args.max_samples, len(d))))
     return d

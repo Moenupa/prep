@@ -16,6 +16,7 @@ _INTERACTIVE = "Interactive Options"
 _SAVE = "Save Options"
 _HF = "HF Upload Options"
 _AUTO = "Auto Conversion Options"
+_CLS = "cls Conversion Options"
 app = typer.Typer()
 
 
@@ -60,15 +61,13 @@ def prep(
     a_template: str = typer.Option(
         default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
     ),
-    labels: list[str] = typer.Option(
-        default=[], envvar="LABELS", rich_help_panel=_AUTO
-    ),
     verl_ability: str = typer.Option(
         default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
     ),
     verl_style: str = typer.Option(
         default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
     ),
+    labels: list[str] = typer.Option(default=[], envvar="LABELS", rich_help_panel=_CLS),
     interactive: bool = typer.Option(
         False,
         envvar="UI",
