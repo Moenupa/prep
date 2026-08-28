@@ -69,7 +69,7 @@ def validate_answer_formatting(
 
 
 def count_img_tags(text: str) -> int:
-    if "<image 1>" in text:
+    if "<image 1>" in text or "<image 01>" in text:
         # support <image 01> and <image 1> tags, 1-99 tags
         # if it goes beyond that, use <image> instead.
         # do not use .count() because it measures multiple occurrences of the same tag
