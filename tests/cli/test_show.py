@@ -8,10 +8,10 @@ INFO     Dataset({
              num_rows: 10
          })
 INFO     {'question': 'What is 0+0?', 'answer': '0'}
-💾	About to save to disk -> PosixPath('out/show/_/train')
-💾	Skipping (non-interactive mode)
-☁️	About to upload to HF -> '_' (subset='default', split='train', private=True)
-☁️	Skipping (non-interactive mode)"""
+💾\tAbout to save to disk -> PosixPath('out/show/_/train')...
+💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)
+☁️\tAbout to upload to HF -> '_' (subset='default', split='train', private=True)...
+☁️\tNot uploaded (pass `--hf` to override or `export UI=1` to enable interactive prompts)"""
 
 
 def test_prep_show_stdout(runner, qa_jsonl, assert_stdout):

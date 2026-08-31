@@ -9,10 +9,10 @@ INFO     Dataset({
          })
 INFO     {'images': [], 'messages': [{'role': 'user', 'content': 'What is 0+0?'}, {'role': 'assistant', 'content':
          '0'}], 'id': 'qa.jsonl/00000000', 'extra_info': ''}
-💾	About to save to disk -> PosixPath('out/sft/auto/train')
-💾	Skipping (non-interactive mode)
-☁️	About to upload to HF -> 'auto' (subset='default', split='train', private=True)
-☁️	Skipping (non-interactive mode)"""
+💾\tAbout to save to disk -> PosixPath('out/sft/auto/train')...
+💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)
+☁️\tAbout to upload to HF -> 'auto' (subset='default', split='train', private=True)...
+☁️\tNot uploaded (pass `--hf` to override or `export UI=1` to enable interactive prompts)"""
 
 
 def test_prep_sft_stdout(runner, qa_jsonl, assert_stdout):

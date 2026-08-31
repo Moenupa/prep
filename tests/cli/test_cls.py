@@ -12,10 +12,10 @@ INFO     Dataset({
          })
 INFO     {'id': 'cifar10/train00000000', 'image': <PIL.PngImagePlugin.PngImageFile image mode=RGB size=32x32 at
          *>, 'label': 0, 'extra_info': ''}
-💾	About to save to disk -> PosixPath('out/cls/cifar10/train')
-💾	Skipping (non-interactive mode)
-☁️\tAbout to upload to HF -> 'cifar10' (subset='default', split='train', private=True)
-☁️\tSkipping (non-interactive mode)"""
+💾\tAbout to save to disk -> PosixPath('out/cls/cifar10/train')...
+💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)
+☁️\tAbout to upload to HF -> 'cifar10' (subset='default', split='train', private=True)...
+☁️\tNot uploaded (pass `--hf` to override or `export UI=1` to enable interactive prompts)"""
 
 
 @pytest.mark.slow
