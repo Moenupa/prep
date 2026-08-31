@@ -12,6 +12,7 @@ def auto_sft(
     option_cols: list[str],
     q_template: str,
     a_template: str,
+    extra_info: str | None = None,
 ) -> dict:
     images = extract_images(e)
     question, answer = extract_qa(
@@ -25,7 +26,7 @@ def auto_sft(
             {"role": "assistant", "content": answer},
         ],
         "id": f"{data_name}/{idx:08d}",
-        "extra_info": e.get("extra_info", ""),
+        "extra_info": e.get(extra_info, extra_info) or "",
     }
 
 
@@ -44,6 +45,7 @@ def load_sft(path: str, split: str, args: ProcArgs):
             option_cols=args.option_cols,
             q_template=args.question_template,
             a_template=args.answer_template,
+            extra_info=args.extra_info,
         ),
         remove_columns=d.column_names,
         num_proc=args.num_proc,

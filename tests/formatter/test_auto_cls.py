@@ -37,7 +37,13 @@ class TestAutoClsFunction:
         }
 
         result = auto_cls(
-            example, 0, data_name="test", split="train", a_cols=["label"], transforms=[]
+            example,
+            0,
+            data_name="test",
+            split="train",
+            a_cols=["label"],
+            transforms=[],
+            extra_info="extra_info",
         )
 
         assert result["id"] == "test/train00000000"

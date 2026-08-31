@@ -15,6 +15,7 @@ def auto_verl(
     a_template: str,
     ability: str,
     style: str,
+    extra_info: str | None = None,
 ):
     images = extract_images(e)
     question, answer = extract_qa(
@@ -35,7 +36,7 @@ def auto_verl(
             "split": split,
             "index": f"{idx:08d}",
             "explanation": e.get("explanation", ""),
-            "misc": e.get("extra_info", ""),
+            "misc": e.get(extra_info, extra_info) or "",
         },
     }
 
@@ -58,6 +59,7 @@ def load_verl(path: str, split: str, args: ProcArgs):
             a_template=args.answer_template,
             ability=args.verl_ability,
             style=args.verl_style,
+            extra_info=args.extra_info,
         ),
         remove_columns=d.column_names,
         num_proc=args.num_proc,
