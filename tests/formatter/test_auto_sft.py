@@ -24,6 +24,7 @@ class TestAutoSftFunction:
             option_cols=[],
             q_template="Question: {question}",
             a_template="{answer}",
+            extra_info="extra_info",
         )
 
         assert result["id"] == "test/00000000"

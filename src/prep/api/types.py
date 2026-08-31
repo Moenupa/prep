@@ -48,9 +48,11 @@ class ProcArgs:
 
     answer_cols: list[str] = field(default_factory=lambda: DEFAULT_ACOLS)
     answer_template: str = DEFAULT_ATEMP
-    labels: list[str] = field(default_factory=lambda: [])
+
+    extra_info: str | None = None
 
     # image-to-image transforms applied in order during conversion
+    labels: list[str] = field(default_factory=lambda: [])
     transforms: list[str] = field(default_factory=lambda: [])
 
     # to fill in verl fields, this does not affect verl training

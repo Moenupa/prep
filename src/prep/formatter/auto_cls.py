@@ -16,6 +16,7 @@ def auto_cls(
     split: str,
     a_cols: list[str],
     transforms: list[str],
+    extra_info: str | None = None,
 ):
     images = extract_images(e)
     if len(images) != 1:
@@ -30,7 +31,7 @@ def auto_cls(
         "id": f"{data_name}/{split}{idx:08d}",
         "image": image,
         "label": label,
-        "extra_info": e.get("extra_info", ""),
+        "extra_info": e.get(extra_info, extra_info) or "",
     }
 
 
@@ -47,6 +48,7 @@ def load_cls(path: str, split: str, args: ProcArgs):
             split=split,
             a_cols=args.answer_cols,
             transforms=args.transforms,
+            extra_info=args.extra_info,
         ),
         remove_columns=d.column_names,
         num_proc=args.num_proc,

@@ -109,6 +109,7 @@ class TestAutoVerlFunction:
             a_template="{answer}",
             ability="math",
             style="rule",
+            extra_info="extra_info",
         )
 
         assert result["extra_info"]["split"] == "train"

@@ -79,6 +79,9 @@ def prep(
     a_template: str = typer.Option(
         default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
     ),
+    extra_info: str | None = typer.Option(
+        default=None, envvar="EXTRA_INFO", rich_help_panel=_AUTO
+    ),
     verl_ability: str = typer.Option(
         default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
     ),
@@ -113,6 +116,7 @@ def prep(
             option_cols=op_cols,
             answer_cols=a_cols,
             answer_template=a_template,
+            extra_info=extra_info,
             labels=labels,
             transforms=transforms,
             verl_ability=verl_ability,
