@@ -6,11 +6,12 @@ from prep.cli import app
 EXPECTED = """\
 WARNING  ⚠️      Formatter pipeline not registered for ('cifar10', 'cls', 'train').
 WARNING  Fallback to generic pipeline 'auto', which may cause unexpected formatting issues.
-INFO     Dataset({
-             features: ['id', 'image', 'label', 'extra_info'],
-             num_rows: 50000
-         })
-INFO     {'id': 'cifar10/train00000000', 'image': <PIL.PngImagePlugin.PngImageFile image mode=RGB size=32x32 at
+Dataset({
+    features: ['id', 'image', 'label', 'extra_info'],
+    num_rows: 50000
+})
+Sample 0:
+{'id': 'cifar10/train00000000', 'image': <PIL.PngImagePlugin.PngImageFile image mode=RGB size=32x32 at
          *>, 'label': 0, 'extra_info': ''}
 💾\tAbout to save to disk -> PosixPath('out/cls/cifar10/train')...
 💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)

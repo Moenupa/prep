@@ -3,11 +3,12 @@
 from prep.cli import app
 
 EXPECTED = """\
-INFO     Dataset({
-             features: ['question', 'answer'],
-             num_rows: 10
-         })
-INFO     {'question': 'What is 0+0?', 'answer': '0'}
+Dataset({
+    features: ['question', 'answer'],
+    num_rows: 10
+})
+Sample 0:
+{'question': 'What is 0+0?', 'answer': '0'}
 💾\tAbout to save to disk -> PosixPath('out/show/_/train')...
 💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)
 ☁️\tAbout to upload to HF -> '_' (subset='default', split='train', private=True)...

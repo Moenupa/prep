@@ -3,12 +3,17 @@
 from prep.cli import app
 
 EXPECTED = """\
-INFO     Dataset({
-             features: ['images', 'messages', 'id', 'extra_info'],
-             num_rows: 10
-         })
-INFO     {'images': [], 'messages': [{'role': 'user', 'content': 'What is 0+0?'}, {'role': 'assistant', 'content':
-         '0'}], 'id': 'qa.jsonl/00000000', 'extra_info': ''}
+Dataset({
+    features: ['images', 'messages', 'id', 'extra_info'],
+    num_rows: 10
+})
+Sample 0:
+{
+    'images': [],
+    'messages': [{'role': 'user', 'content': 'What is 0+0?'}, {'role': 'assistant', 'content': '0'}],
+    'id': 'qa.jsonl/00000000',
+    'extra_info': ''
+}
 💾\tAbout to save to disk -> PosixPath('out/sft/auto/train')...
 💾\tNot saved (pass `--save` to override or `export UI=1` to enable interactive prompts)
 ☁️\tAbout to upload to HF -> 'auto' (subset='default', split='train', private=True)...
