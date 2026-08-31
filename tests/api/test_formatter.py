@@ -55,11 +55,7 @@ def test_formatter_pipeline_load_handles_cast_and_validation_failures(
         "check_sample",
         lambda *_: (_ for _ in ()).throw(ValueError("check")),
     )
-    peeked: list[Dataset] = []
-    monkeypatch.setattr(ProcArgs, "peek", lambda _self, d: peeked.append(d))
-
     assert pipeline.load("source", procargs) == dataset
-    assert peeked == [dataset]
 
 
 def test_formatter_pipeline_load_requires_source(procargs: ProcArgs) -> None:

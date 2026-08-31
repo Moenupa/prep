@@ -2,14 +2,7 @@ from pathlib import Path
 
 import typer
 
-from .api import (
-    FormatterPipeline,
-    OutputActions,
-    PathIO,
-    ProcArgs,
-    get_valid_formats,
-    list_transform_names,
-)
+from .api import list_transform_names
 from .api.types import _DataFormat, _Split
 from .constants import (
     DEFAULT_ACOLS,
@@ -17,12 +10,15 @@ from .constants import (
     DEFAULT_OPCOLS,
     DEFAULT_QCOLS,
     DEFAULT_QTEMP,
+    DEFAULT_UI,
 )
 
 _INTERACTIVE = "Interactive Options"
+_SHOW = "Preview Options"
 _SAVE = "Save Options"
-_HF = "HF Upload Options"
+_HF = "Upload Options"
 _AUTO = "Auto Conversion Options"
+_VERL = "VERL Conversion Options"
 _CLS = "CLS Conversion Options"
 app = typer.Typer()
 
@@ -31,18 +27,21 @@ app = typer.Typer()
 def prep(
     target_format: _DataFormat = typer.Argument(..., help="Target format."),
     pipeline_id: str = typer.Argument(..., help="Formatter Pipeline ID."),
-    split: _Split = typer.Argument("train", help="Split to convert."),
+    split: _Split = typer.Argument("train", help="Split to convert to."),
     src: str | None = typer.Argument(None, envvar="SRC", help="Source, HF/local path."),
     *,
-    head: int = typer.Option(3, envvar="HEAD", help="Preview first n samples."),
-    tail: int = typer.Option(0, envvar="TAIL", help="Preview last n samples."),
     nproc: int = typer.Option(16, envvar="NPROC", help="Workers for processing."),
+    max_samples: int | None = typer.Option(None, envvar="MAX_SAMPLES"),
     seed: int | None = typer.Option(
         None,
         envvar="SEED",
-        help="Seed for shuffling. None disables shuffling; negative for random; non-negative for fixed seed.",
+        help="Seed for shuffling. Default disables shuffling; $<0$ for random; $>=0$ for seeded-random.",
     ),
-    save: bool | None = typer.Option(None, envvar="SAVE", rich_help_panel=_SAVE),
+    # preview
+    head: int = typer.Option(3, envvar="HEAD", rich_help_panel=_SHOW),
+    tail: int = typer.Option(0, envvar="TAIL", rich_help_panel=_SHOW),
+    # save
+    save: bool | None = typer.Option(DEFAULT_UI, envvar="SAVE", rich_help_panel=_SAVE),
     save_root: Path = typer.Option(
         Path("out"), envvar="SAVE_DIR", rich_help_panel=_SAVE
     ),
@@ -50,20 +49,13 @@ def prep(
     save_nproc: int | None = typer.Option(
         None, envvar="SAVE_NPROC", rich_help_panel=_SAVE
     ),
-    save_preview: int = typer.Option(
-        0,
-        envvar="SAVE_PREVIEW",
-        rich_help_panel=_SAVE,
-        help="Save images from the first N samples for inspection.",
-    ),
-    hf: bool | None = typer.Option(None, envvar="HF", rich_help_panel=_HF),
+    # upload
+    hf: bool | None = typer.Option(DEFAULT_UI, envvar="HF", rich_help_panel=_HF),
     hf_repo: str | None = typer.Option(None, envvar="HF_REPO", rich_help_panel=_HF),
     hf_subset: str | None = typer.Option(None, envvar="HF_SUBSET", rich_help_panel=_HF),
     hf_private: bool = typer.Option(True, envvar="HF_PRIVATE", rich_help_panel=_HF),
     hf_nproc: int | None = typer.Option(None, envvar="HF_NPROC", rich_help_panel=_HF),
-    max_samples: int | None = typer.Option(
-        None, envvar="MAX_SAMPLES", rich_help_panel=_AUTO
-    ),
+    # auto conversion
     q_cols: list[str] = typer.Option(
         default=DEFAULT_QCOLS, envvar="Q_COLS", rich_help_panel=_AUTO
     ),
@@ -82,12 +74,14 @@ def prep(
     extra_info: str | None = typer.Option(
         default=None, envvar="EXTRA_INFO", rich_help_panel=_AUTO
     ),
+    # auto conversion (verl)
     verl_ability: str = typer.Option(
-        default="math", envvar="VERL_ABILITY", rich_help_panel=_AUTO
+        default="math", envvar="VERL_ABILITY", rich_help_panel=_VERL
     ),
     verl_style: str = typer.Option(
-        default="rule", envvar="VERL_STYLE", rich_help_panel=_AUTO
+        default="rule", envvar="VERL_STYLE", rich_help_panel=_VERL
     ),
+    # auto conversion (cls)
     labels: list[str] = typer.Option(default=[], envvar="LABELS", rich_help_panel=_CLS),
     transforms: list[str] = typer.Option(
         default=[],
@@ -95,13 +89,9 @@ def prep(
         rich_help_panel=_CLS,
         help=f"Image transforms applied in order. Available: {list_transform_names()}",
     ),
-    interactive: bool = typer.Option(
-        False,
-        envvar="UI",
-        rich_help_panel=_INTERACTIVE,
-        help="Enable interactive prompts for save/upload.",
-    ),
 ):
+    from prep.api import DataIO, FormatterPipeline, ProcArgs
+
     pipeline = FormatterPipeline.get(
         id_=pipeline_id,
         target_format=target_format,
@@ -127,7 +117,7 @@ def prep(
             seed=seed,
         ),
     )
-    action = OutputActions(
+    action = DataIO(
         save=save,
         save_root=save_root.expanduser(),
         save_parquet=save_parq,
@@ -135,10 +125,10 @@ def prep(
         hf_repo=hf_repo or pipeline_id,
         hf_subset=hf_subset,
         hf_private=hf_private,
-        save_preview=save_preview,
-        interactive=interactive,
+        preview_first_n=head,
+        preview_last_n=tail,
     )
-    action.do_dump(d, pipeline=pipeline, id_override=pipeline_id)
+    action.do_preview(d, pipeline=pipeline, id_override=pipeline_id)
     action.do_save(d, pipeline=pipeline, nproc=save_nproc, id_override=pipeline_id)
     action.do_upload(d, split=pipeline.split, nproc=hf_nproc)
 
@@ -150,12 +140,16 @@ def ppls(
     filter_format: str = "*",
     list_format: bool = False,
 ):
+    from prep.api import get_valid_formats
+
     if list_format:
         for f in get_valid_formats() + ["others"]:
             typer.echo(f)
         return
 
     from rich.console import Console
+
+    from prep.api import PathIO
 
     console = Console()
     console.print(f"Showing results under {save_root.as_posix()!r}")

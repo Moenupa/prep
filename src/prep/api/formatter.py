@@ -245,7 +245,6 @@ class FormatterPipeline:
             logger.error(f"{ERROR_PREFIX}Validation failed {str(self)}")
             logger.error(f"{ERROR_PREFIX}{e}")
 
-        args.peek(d)
         return d
 
 

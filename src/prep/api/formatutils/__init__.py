@@ -1,5 +1,6 @@
 from .images import extract_images, iter_images
 from .labels import extract_label
+from .media import write_to_file
 from .options import (
     extract_options,
     format_options,
@@ -17,4 +18,5 @@ __all__ = [
     "get_options_from_multi_entry",
     "get_options_from_single_entry",
     "iter_images",
+    "write_to_file",
 ]

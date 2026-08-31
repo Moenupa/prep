@@ -22,11 +22,12 @@ DEFAULT_OPCOLS = ["options", "choices"] + [f"choice_{op}" for op in "abcdefghij"
 IMAGE_TAG = "<image>"
 FORMATTING_PATTERN = re.compile(r"ANSWER:|<answer>|</answer>|\\boxed\{")
 ID_PATTERN = re.compile(r"^[a-zA-Z0-9\._-]+$")
+DEFAULT_UI = None if is_env_enabled("UI", "0") else False
 
 SAVE_PREFIX = "💾\t"
 HF_PREFIX = "☁️\t"
 PREVIEW_PREFIX = "🖼️\t"
-SKIP = "SKIP"
+SKIP = "X"
 
 WARN_PREFIX = "⚠️\t"
 ERROR_PREFIX = "⛔\t"

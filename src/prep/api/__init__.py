@@ -1,7 +1,8 @@
-from .dataio import OutputActions, PathIO
+from .dataio import DataIO
 from .formatter import FormatterPipeline, LoadFn, formatter
 from .load import adaptive_load_dataset
 from .log import get_logger
+from .pathio import PathIO
 from .transform import (
     ImageTransform,
     apply_image_transform,
@@ -16,10 +17,10 @@ from .types import DataFormat, ProcArgs, Split, get_valid_formats, get_valid_spl
 
 __all__ = [
     "DataFormat",
+    "DataIO",
     "FormatterPipeline",
     "ImageTransform",
     "LoadFn",
-    "OutputActions",
     "PathIO",
     "ProcArgs",
     "Split",
