@@ -88,7 +88,16 @@ class TestOutputActions:
     ) -> None:
         dataset = Dataset.from_dict({"value": [1]})
         pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-        action = OutputActions(tmp_path, True, False, True, "org/repo", None, True)
+        action = OutputActions(
+            save_root=tmp_path,
+            save=True,
+            save_parquet=False,
+            save_preview=None,
+            hf=True,
+            hf_repo="org/repo",
+            hf_subset=None,
+            hf_private=True,
+        )
         save_calls: list[object] = []
         upload_calls: list[tuple[tuple, dict]] = []
         monkeypatch.setattr(
@@ -125,7 +134,16 @@ class TestOutputActions:
     ) -> None:
         dataset = Dataset.from_dict({"value": [1]})
         pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-        action = OutputActions(tmp_path, None, False, None, "org/repo", None, False)
+        action = OutputActions(
+            save_root=tmp_path,
+            save=None,
+            save_parquet=False,
+            save_preview=None,
+            hf=None,
+            hf_repo="org/repo",
+            hf_subset=None,
+            hf_private=False,
+        )
         action.do_save(dataset, pipeline)
         action.do_upload(dataset, "train")
         assert "Skipping (non-interactive mode)" in capsys.readouterr().out
@@ -135,16 +153,16 @@ class TestDoDump:
     """Tests for OutputActions.do_dump, which writes preview images to disk."""
 
     @staticmethod
-    def _action(save_root: Path, preview: int) -> OutputActions:
+    def _action(save_root: Path, save_preview: int) -> OutputActions:
         return OutputActions(
             save_root=save_root,
             save=False,
             save_parquet=False,
+            save_preview=save_preview,
             hf=False,
             hf_repo="org/repo",
             hf_subset=None,
             hf_private=True,
-            preview=preview,
         )
 
     @staticmethod
@@ -160,7 +178,7 @@ class TestDoDump:
         dataset = self._blob_image_dataset([9, 10])
         pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
 
-        self._action(tmp_path, preview=2).do_dump(dataset, pipeline)
+        self._action(tmp_path, save_preview=2).do_dump(dataset, pipeline)
 
         dump_dir = tmp_path / "cls" / "demo" / "train"
         assert sorted(p.name for p in dump_dir.iterdir()) == [
@@ -179,7 +197,7 @@ class TestDoDump:
         )
         pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
 
-        self._action(tmp_path, preview=2).do_dump(dataset, pipeline)
+        self._action(tmp_path, save_preview=2).do_dump(dataset, pipeline)
 
         dump_dir = tmp_path / "sft" / "demo" / "train"
         assert sorted(p.name for p in dump_dir.iterdir()) == [
@@ -194,7 +212,7 @@ class TestDoDump:
         dataset = self._blob_image_dataset([8])
         pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
 
-        self._action(tmp_path, preview=0).do_dump(dataset, pipeline)
+        self._action(tmp_path, save_preview=0).do_dump(dataset, pipeline)
 
         assert list(tmp_path.iterdir()) == []
 
@@ -202,7 +220,7 @@ class TestDoDump:
         dataset = Dataset.from_dict({"image": []})
         pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
 
-        self._action(tmp_path, preview=3).do_dump(dataset, pipeline)
+        self._action(tmp_path, save_preview=3).do_dump(dataset, pipeline)
 
         assert not [p for p in tmp_path.rglob("*") if p.is_file()]
 
@@ -210,7 +228,7 @@ class TestDoDump:
         dataset = self._blob_image_dataset([8])
         pipeline = FormatterPipeline("demo", "cls", "train", lambda *_: dataset)
 
-        self._action(tmp_path, preview=10).do_dump(
+        self._action(tmp_path, save_preview=10).do_dump(
             dataset, pipeline, id_override="alias"
         )
 
@@ -230,7 +248,7 @@ class TestDoDump:
             "prep.api.dataio._write_preview_image", lambda entry, dest: None
         )
 
-        self._action(tmp_path, preview=1).do_dump(dataset, pipeline)
+        self._action(tmp_path, save_preview=1).do_dump(dataset, pipeline)
 
         assert not [p for p in tmp_path.rglob("*") if p.is_file()]
         assert "Preview image saved" not in capsys.readouterr().out

@@ -228,13 +228,13 @@ class PathIO:
 class OutputActions(PathIO):
     save: bool | None
     save_parquet: bool
+    save_preview: int | None
 
     hf: bool | None
     hf_repo: str
     hf_subset: str | None
     hf_private: bool
 
-    preview: int | None = None
     interactive: bool = False
 
     def do_dump(
@@ -243,31 +243,31 @@ class OutputActions(PathIO):
         pipeline: FormatterPipeline,
         id_override: str | None = None,
     ) -> None:
-        """Dump images from the first ``self.preview`` rows for visual inspection.
+        """Dump images from the first ``self.save_preview`` rows for visual inspection.
 
         Since image columns are stored as opaque binary blobs in parquet/arrow
         outputs, this writes a few representative image files to disk under the
         default save path so an agent or user can directly inspect them.
 
         Args:
-            d: The formatted dataset to preview.
+            d: The formatted dataset.
             pipeline: The pipeline used to produce ``d`` (used for the output path).
             id_override: Overrides the pipeline ID in the output path, mirroring
                 the behavior of ``OutputActions.do_save``.
         """
-        if self.preview is None or self.preview <= 0:
+        if self.save_preview is None or self.save_preview <= 0:
             return
         dump_dir = self.default_save_path(
             pipeline, as_parquet=False, id_override=id_override
         )
         dump_dir.mkdir(parents=True, exist_ok=True)
 
-        for i in range(min(self.preview, len(d))):
+        for i in range(min(self.save_preview, len(d))):
             try:
                 row = d[i]
             except Exception as exc:
                 logger.warning(
-                    f"{WARN_PREFIX}Failed to load sample {i} for preview: {exc}"
+                    f"{WARN_PREFIX}Failed to save preview images of sample {i}: {exc}"
                 )
                 continue
             for j, img in enumerate(iter_images(row)):
