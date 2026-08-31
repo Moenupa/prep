@@ -91,7 +91,7 @@ class TestOutputActions:
         action = OutputActions(
             save_root=tmp_path,
             save=True,
-            save_parquet=True,
+            save_parquet=False,
             save_preview=None,
             hf=True,
             hf_repo="org/repo",
