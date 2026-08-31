@@ -88,7 +88,9 @@ class TestOutputActions:
     ) -> None:
         dataset = Dataset.from_dict({"value": [1]})
         pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-        action = OutputActions(tmp_path, True, False, True, "org/repo", None, True)
+        action = OutputActions(
+            tmp_path, True, False, None, True, "org/repo", None, True
+        )
         save_calls: list[object] = []
         upload_calls: list[tuple[tuple, dict]] = []
         monkeypatch.setattr(
@@ -125,7 +127,9 @@ class TestOutputActions:
     ) -> None:
         dataset = Dataset.from_dict({"value": [1]})
         pipeline = FormatterPipeline("demo", "sft", "train", lambda *_: dataset)
-        action = OutputActions(tmp_path, None, False, None, "org/repo", None, False)
+        action = OutputActions(
+            tmp_path, None, False, None, None, "org/repo", None, False
+        )
         action.do_save(dataset, pipeline)
         action.do_upload(dataset, "train")
         assert "Skipping (non-interactive mode)" in capsys.readouterr().out
@@ -140,11 +144,11 @@ class TestDoDump:
             save_root=save_root,
             save=False,
             save_parquet=False,
+            save_preview=preview,
             hf=False,
             hf_repo="org/repo",
             hf_subset=None,
             hf_private=True,
-            preview=preview,
         )
 
     @staticmethod

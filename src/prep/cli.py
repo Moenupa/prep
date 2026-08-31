@@ -131,7 +131,7 @@ def prep(
         hf_repo=hf_repo or pipeline_id,
         hf_subset=hf_subset,
         hf_private=hf_private,
-        preview=save_preview,
+        save_preview=save_preview,
         interactive=interactive,
     )
     action.do_dump(d, pipeline=pipeline, id_override=pipeline_id)

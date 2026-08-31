@@ -228,13 +228,13 @@ class PathIO:
 class OutputActions(PathIO):
     save: bool | None
     save_parquet: bool
+    save_preview: int | None
 
     hf: bool | None
     hf_repo: str
     hf_subset: str | None
     hf_private: bool
 
-    preview: int | None = None
     interactive: bool = False
 
     def do_dump(
@@ -255,14 +255,14 @@ class OutputActions(PathIO):
             id_override: Overrides the pipeline ID in the output path, mirroring
                 the behavior of ``OutputActions.do_save``.
         """
-        if self.preview is None or self.preview <= 0:
+        if self.save_preview is None or self.save_preview <= 0:
             return
         dump_dir = self.default_save_path(
             pipeline, as_parquet=False, id_override=id_override
         )
         dump_dir.mkdir(parents=True, exist_ok=True)
 
-        for i in range(min(self.preview, len(d))):
+        for i in range(min(self.save_preview, len(d))):
             try:
                 row = d[i]
             except Exception as exc:
