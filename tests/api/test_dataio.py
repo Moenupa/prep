@@ -142,7 +142,7 @@ class TestOutputActions:
             hf=None,
             hf_repo="org/repo",
             hf_subset=None,
-            hf_private=False
+            hf_private=False,
         )
         action.do_save(dataset, pipeline)
         action.do_upload(dataset, "train")
