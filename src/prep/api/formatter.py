@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from datasets import ClassLabel, Features, Image, List, Value
@@ -63,6 +64,16 @@ def formatter(
         return function
 
     return decorator
+
+
+def dump_mapping(mapping: list[str] | dict, fp: Path) -> None:
+    import json
+
+    if isinstance(mapping, list):
+        mapping = dict(enumerate(mapping))
+
+    with open(fp, "w", encoding="utf-8") as f:
+        json.dump(mapping, f, ensure_ascii=False, indent=4)
 
 
 @dataclass(frozen=True)
@@ -181,21 +192,39 @@ class FormatterPipeline:
 
     @staticmethod
     def cast_cls(d: "Dataset", args: ProcArgs) -> "Dataset":
-        if isinstance(d.features.get("label"), ClassLabel):
-            label_feature = d.features["label"]
-        elif args.labels:
-            label_feature = ClassLabel(names=args.labels)
-        else:
+        original_feat = d.features.get("label")
+        if not isinstance(original_feat, (ClassLabel, Value)):
             raise ValueError(
-                "Please provide labels via ENV `LABELS='cls1 cls2'`"
-                " or CLI option `--labels cls1 --labels cls2`."
+                f"Expected label feature to be ClassLabel or Value, got {type(original_feat)}"
             )
+
+        candidate_feat = args.classlabel
+        if isinstance(original_feat, Value) and candidate_feat is None:
+            unique_labels = d.unique("label")
+            candidate_feat = ClassLabel(names=sorted(map(str, unique_labels)))
+        label_feat: ClassLabel = candidate_feat or original_feat
+        assert isinstance(label_feat, ClassLabel)
+
+        if args.label_resolve is not None and args.classlabel_resolve is not None:
+            # if user provides a classlabel_resolve, we need to resolve it according to the label_feat
+            # and anonymize the label names to avoid leaking information about the original labels.
+            after_resolve = {
+                label_feat.str2int(k): v for k, v in args.classlabel_resolve.items()
+            }
+            # save this mapping to a file
+            dump_mapping(
+                after_resolve, args.label_resolve.with_suffix(".resolved.json")
+            )
+            dump_mapping(
+                label_feat.names, args.label_resolve.with_suffix(".original.json")
+            )
+            label_feat = ClassLabel(num_classes=len(label_feat.names))
 
         return d.cast(
             Features(
                 id=Value("string"),
                 image=Image(decode=True),
-                label=label_feature,
+                label=label_feat,
                 extra_info=Value("large_string"),
             ),
             num_proc=args.num_proc,

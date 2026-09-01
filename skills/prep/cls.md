@@ -1,6 +1,6 @@
 ---
 name: cls
-description: Convert datasets to the cls format with the prep CLI — image-label classification records. Covers --labels and the image transform registry (--transforms or TRANSFORMS env var, e.g. crop_black_border). Use for classification data preparation with prep.
+description: Convert datasets to the cls format with the prep CLI — image-label classification records. Covers --labels, label anonymization via --label-resolve, and the image transform registry (--transforms or TRANSFORMS env var, e.g. crop_black_border). Use for classification data preparation with prep.
 ---
 
 # prep `cls` format
@@ -26,7 +26,16 @@ See the shared `prep` skill for source loading, conversion controls, and save op
 }
 ```
 
-`--labels` (or the `LABELS` env var) is required unless the label column is already a Hugging Face `ClassLabel` feature; it provides the class names used for casting.
+`--labels` (or the `LABELS` env var) can override the `'label'` column; it should be exactly the list of class names.
+
+## Label resolution and anonymization
+
+`--label-resolve <to-resolve>.json` (or the `LABEL_RESOLVE` env var) points to a JSON file keyed by `'label'` (as provided to `--labels`). During `cls` conversion, case names are anonymized in favor of case IDs: the `label` column stores only integer case IDs (the index of each case name in `--labels`), and class names are dropped from the saved feature.
+
+Two sidecar JSON files are written next to the resolve path:
+
+- `<to-resolve>.resolved.json`: `{caseid: resolved label}` — agents can read this file directly.
+- `<to-resolve>.original.json`: `{caseid: casename}` — the caseid-to-casename mapping. Agents should avoid reading this file directly, since it holds the original, un-anonymized case names.
 
 ## Image transforms
 

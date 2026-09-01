@@ -1,6 +1,10 @@
+import json
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal, get_args
+
+from datasets.features import ClassLabel
 
 from ..constants import (
     DEFAULT_ACOLS,
@@ -53,6 +57,7 @@ class ProcArgs:
 
     # image-to-image transforms applied in order during conversion
     labels: list[str] = field(default_factory=lambda: [])
+    label_resolve: Path | None = None
     transforms: list[str] = field(default_factory=lambda: [])
 
     # to fill in verl fields, this does not affect verl training
@@ -81,6 +86,21 @@ class ProcArgs:
             logger.warning(
                 "question_template does not contain '{question}' placeholder."
             )
+
+    @property
+    def classlabel(self) -> "ClassLabel | None":
+        if len(self.labels) == 0:
+            return None
+
+        return ClassLabel(names=self.labels)
+
+    @property
+    def classlabel_resolve(self) -> "dict[str, str] | None":
+        if self.label_resolve is None:
+            return None
+
+        with open(self.label_resolve, encoding="utf-8") as f:
+            return json.load(f)
 
     def peek(self, d: Any, level: int = logging.INFO):
         logger.log(level, d)
