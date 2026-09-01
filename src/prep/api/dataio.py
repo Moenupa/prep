@@ -145,7 +145,9 @@ class DataIO(PathIO):
                     for j, img in enumerate(iter_images(row))
                 ]
 
-                rprint(f"[bold]Sample {i}[/bold]: (images {image_paths})", row)
+                rprint(f"[bold]Sample {i}[/bold]:" + (
+                    f" (images {image_paths})" if image_paths else ""
+                ), row)
             except Exception as exc:
                 logger.warning(f"Failed to preview {i}th sample: {exc}")
                 continue
