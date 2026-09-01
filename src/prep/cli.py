@@ -57,34 +57,35 @@ def prep(
     hf_nproc: int | None = typer.Option(None, envvar="HF_NPROC", rich_help_panel=_HF),
     # auto conversion
     q_cols: list[str] = typer.Option(
-        default=DEFAULT_QCOLS, envvar="Q_COLS", rich_help_panel=_AUTO
+        DEFAULT_QCOLS, envvar="Q_COLS", rich_help_panel=_AUTO
     ),
     q_template: str = typer.Option(
-        default=DEFAULT_QTEMP, envvar="Q_TEMP", rich_help_panel=_AUTO
+        DEFAULT_QTEMP, envvar="Q_TEMP", rich_help_panel=_AUTO
     ),
     op_cols: list[str] = typer.Option(
-        default=DEFAULT_OPCOLS, envvar="OP_COLS", rich_help_panel=_AUTO
+        DEFAULT_OPCOLS, envvar="OP_COLS", rich_help_panel=_AUTO
     ),
     a_cols: list[str] = typer.Option(
-        default=DEFAULT_ACOLS, envvar="A_COLS", rich_help_panel=_AUTO
+        DEFAULT_ACOLS, envvar="A_COLS", rich_help_panel=_AUTO
     ),
     a_template: str = typer.Option(
-        default=DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
+        DEFAULT_ATEMP, envvar="A_TEMP", rich_help_panel=_AUTO
     ),
     extra_info: str | None = typer.Option(
-        default=None, envvar="EXTRA_INFO", rich_help_panel=_AUTO
+        None, envvar="EXTRA_INFO", rich_help_panel=_AUTO
     ),
     # auto conversion (verl)
     verl_ability: str = typer.Option(
-        default="math", envvar="VERL_ABILITY", rich_help_panel=_VERL
+        "math", envvar="VERL_ABILITY", rich_help_panel=_VERL
     ),
-    verl_style: str = typer.Option(
-        default="rule", envvar="VERL_STYLE", rich_help_panel=_VERL
-    ),
+    verl_style: str = typer.Option("rule", envvar="VERL_STYLE", rich_help_panel=_VERL),
     # auto conversion (cls)
-    labels: list[str] = typer.Option(default=[], envvar="LABELS", rich_help_panel=_CLS),
+    labels: list[str] = typer.Option([], envvar="LABELS", rich_help_panel=_CLS),
+    label_resolve: Path | None = typer.Option(
+        None, envvar="LABEL_RESOLVE", rich_help_panel=_CLS
+    ),
     transforms: list[str] = typer.Option(
-        default=[],
+        [],
         envvar="TRANSFORMS",
         rich_help_panel=_CLS,
         help=f"Image transforms applied in order. Available: {list_transform_names()}",
@@ -108,6 +109,7 @@ def prep(
             answer_template=a_template,
             extra_info=extra_info,
             labels=labels,
+            label_resolve=label_resolve,
             transforms=transforms,
             verl_ability=verl_ability,
             verl_style=verl_style,
@@ -135,7 +137,7 @@ def prep(
 
 @app.command()
 def ppls(
-    save_root: Path = typer.Argument(default=Path("out"), envvar="SAVE_DIR"),
+    save_root: Path = typer.Argument(Path("out"), envvar="SAVE_DIR"),
     as_json: bool = False,
     filter_format: str = "*",
     list_format: bool = False,

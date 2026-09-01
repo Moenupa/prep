@@ -268,8 +268,8 @@ class TestFormatterCastDataset:
             show_first_n=0,
         )
 
-        with pytest.raises(ValueError, match="labels"):
-            FormatterPipeline.cast_cls(dataset, args_without_labels)
+        result = FormatterPipeline.cast_cls(dataset, args_without_labels)
+        assert result.features["label"] == ClassLabel(names=["airplane"])
 
     def test_cast_dataset_returns_show_and_rejects_unknown_format(self):
         dataset = Dataset.from_dict({"value": [1]})
