@@ -7,7 +7,7 @@ module-name = "prep"
 
 [project]
 name = "prep-cli"
-version = "0.2.1"
+version = "0.3.0"
 description = "Automatic and agent-friendly data preprocessing tool for LLMs and ML."
 readme = "README.md"
 authors = [
