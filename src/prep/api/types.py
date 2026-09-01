@@ -80,7 +80,6 @@ class ProcArgs:
             raise ValueError(f"Invalid answer_cols: {self.answer_cols}")
         if not self.question_template:
             raise ValueError(f"Invalid question_template: {self.question_template}")
-        self.classlabel
         validate_transform_names(self.transforms)
         # we explicitly allow no '{question}' in template for captioning datasets
         if "{question}" not in self.question_template:
