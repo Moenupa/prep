@@ -199,8 +199,9 @@ class FormatterPipeline:
             )
 
         candidate_feat = args.classlabel
-        if isinstance(original_feat, Value):
-            candidate_feat = candidate_feat or ClassLabel(names=sorted(set(d["label"])))
+        if isinstance(original_feat, Value) and candidate_feat is None:
+            unique_labels = d.unique("label")
+            candidate_feat = ClassLabel(names=sorted(map(str, unique_labels)))
         label_feat: ClassLabel = candidate_feat or original_feat
         assert isinstance(label_feat, ClassLabel)
 
