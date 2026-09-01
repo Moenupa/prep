@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from datasets import ClassLabel, Features, Image, List, Value
 
-from ..constants import ERROR_PREFIX, ID_PATTERN, IMAGE_TAG, WARN_PREFIX
+from ..constants import ID_PATTERN, IMAGE_TAG
 from .log import get_logger
 from .types import (
     DataFormat,
@@ -91,7 +91,7 @@ class FormatterPipeline:
             return _FORMATTER_REGISTRY[("_", "show", split)]
         k = (id_, target_format, split)
         if k not in _FORMATTER_REGISTRY:
-            logger.warning(f"{WARN_PREFIX}Formatter pipeline not registered for {k}. ")
+            logger.warning(f"Formatter pipeline not registered for {k}. ")
             logger.warning(
                 "Fallback to generic pipeline 'auto',"
                 " which may cause unexpected formatting issues.",
@@ -213,7 +213,11 @@ class FormatterPipeline:
             case "eval":
                 return FormatterPipeline.cast_eval(d, args)
             case "cls":
-                return FormatterPipeline.cast_cls(d, args)
+                d = FormatterPipeline.cast_cls(d, args)
+                from collections import Counter
+
+                print("label", Counter(d["label"]))
+                return d
             case "show":
                 return d
             case _:
@@ -230,20 +234,20 @@ class FormatterPipeline:
         try:
             d = self.cast_dataset(d, self.target_format, args)
         except Warning as e:
-            logger.warning(f"{WARN_PREFIX}Casting warning {str(self)}")
-            logger.warning(f"{WARN_PREFIX}{e}")
+            logger.warning(f"Casting warning {str(self)}")
+            logger.warning(f"{e}")
         except Exception as e:
-            logger.error(f"{ERROR_PREFIX}Casting failed {str(self)}")
-            logger.error(f"{ERROR_PREFIX}{e}")
+            logger.error(f"Casting failed {str(self)}")
+            logger.error(f"{e}")
         try:
             for i in range(10):
                 self.check_sample(d[i])
         except Warning as e:
-            logger.warning(f"{WARN_PREFIX}Validation warning {str(self)}")
-            logger.warning(f"{WARN_PREFIX}{e}")
+            logger.warning(f"Validation warning {str(self)}")
+            logger.warning(f"{e}")
         except Exception as e:
-            logger.error(f"{ERROR_PREFIX}Validation failed {str(self)}")
-            logger.error(f"{ERROR_PREFIX}{e}")
+            logger.error(f"Validation failed {str(self)}")
+            logger.error(f"{e}")
 
         return d
 

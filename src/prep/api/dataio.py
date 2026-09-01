@@ -7,7 +7,7 @@ import typer
 from datasets import get_dataset_config_names, get_dataset_split_names
 from rich import print as rprint
 
-from ..constants import HF_PREFIX, PREVIEW_PREFIX, SAVE_PREFIX, SKIP, WARN_PREFIX
+from ..constants import HF_PREFIX, SAVE_PREFIX, SKIP
 from .formatutils import iter_images, write_to_file
 from .log import get_logger
 from .pathio import PathIO
@@ -140,16 +140,18 @@ class DataIO(PathIO):
         ):
             try:
                 row = d[i]
-                rprint(f"[bold]Sample {i}[/bold]:", row)
+                image_paths = [
+                    str(write_to_file(img, save_root / f"{i:06d}_{j:02d}"))
+                    for j, img in enumerate(iter_images(row))
+                ]
 
-                for j, img in enumerate(iter_images(row)):
-                    path = write_to_file(
-                        img,
-                        save_root / f"{i:06d}_{j:02d}",
-                    )
-                    rprint(f"{PREVIEW_PREFIX}Preview image saved: {path}")
+                rprint(
+                    f"[bold]Sample {i}[/bold]:"
+                    + (f" (images {image_paths})" if image_paths else ""),
+                    row,
+                )
             except Exception as exc:
-                logger.warning(f"{WARN_PREFIX}Failed to preview {i}th sample: {exc}")
+                logger.warning(f"Failed to preview {i}th sample: {exc}")
                 continue
 
     def do_save(

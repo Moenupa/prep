@@ -7,7 +7,7 @@ which is also unregistered for this format, and fails with a KeyError.
 from prep.cli import app
 
 EXPECTED = """\
-WARNING  ⚠️      Formatter pipeline not registered for ('auto', 'clip', 'train').
+WARNING  Formatter pipeline not registered for ('auto', 'clip', 'train').
 WARNING  Fallback to generic pipeline 'auto', which may cause unexpected formatting issues."""
 
 

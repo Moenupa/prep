@@ -23,6 +23,11 @@ IMAGE_TAG = "<image>"
 FORMATTING_PATTERN = re.compile(r"ANSWER:|<answer>|</answer>|\\boxed\{")
 ID_PATTERN = re.compile(r"^[a-zA-Z0-9\._-]+$")
 DEFAULT_UI = None if is_env_enabled("UI", "0") else False
+# interactive mode off -> disable progress bars
+if DEFAULT_UI is not None:
+    from datasets import disable_progress_bars
+
+    disable_progress_bars()
 
 SAVE_PREFIX = "💾\t"
 HF_PREFIX = "☁️\t"
